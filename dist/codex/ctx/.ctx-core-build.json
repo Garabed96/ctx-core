@@ -1,0 +1,9 @@
+{
+  "runtime": "codex",
+  "skills": [
+    "ctx-prd",
+    "ctx-lean"
+  ],
+  "source_sha256": "d9f7b1145cd55c1f6e1abce08ff4abded0154fcc285a3e1db510c0dcd0a22e86",
+  "version": "0.1.0"
+}

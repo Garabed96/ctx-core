@@ -1,0 +1,9 @@
+{
+  "runtime": "omp",
+  "skills": [
+    "ctx-prd",
+    "ctx-lean"
+  ],
+  "source_sha256": "33ee5d6a83fea80d0884b4ce79f35cb2f339f9870a47463bb3a0479fdd3c4f59",
+  "version": "0.1.0"
+}

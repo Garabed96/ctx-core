@@ -1,0 +1,20 @@
+{
+  "author": {
+    "name": "Garo Nazarian"
+  },
+  "description": "Continuity-first product and technical execution through two deep workflows: PRD and Lean.",
+  "interface": {
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "category": "Coding",
+    "developerName": "Garo Nazarian",
+    "displayName": "CTX Core",
+    "shortDescription": "PRD and Lean continuity workflows"
+  },
+  "license": "UNLICENSED",
+  "name": "ctx",
+  "skills": "./skills/",
+  "version": "0.1.0"
+}

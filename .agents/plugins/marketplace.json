@@ -1,0 +1,20 @@
+{
+  "name": "ctx-core",
+  "interface": {
+    "displayName": "CTX Core"
+  },
+  "plugins": [
+    {
+      "name": "ctx",
+      "source": {
+        "source": "local",
+        "path": "./dist/codex/ctx"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}

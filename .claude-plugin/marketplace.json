@@ -1,0 +1,17 @@
+{
+  "name": "ctx-core",
+  "owner": {
+    "name": "Garo Nazarian"
+  },
+  "metadata": {
+    "description": "Continuity-first PRD and Lean workflows for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "ctx",
+      "source": "./dist/claude-code/ctx",
+      "description": "Two deep workflows for durable product decisions and lean technical execution.",
+      "version": "0.1.0"
+    }
+  ]
+}

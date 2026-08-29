@@ -1,0 +1,134 @@
+[
+  {
+    "id": "unsettled-product-choice",
+    "prompt": "Help me decide whether first-run onboarding should be a guided checklist or an empty dashboard. The recovery behavior and success gate are still unclear.",
+    "expected": {
+      "route": "ctx-prd",
+      "authorization": "artifact-only",
+      "durable_state": "prd",
+      "mode": "interview",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "design-and-build",
+    "prompt": "Design and build a safer medication correction flow. I have not decided whether corrections replace or annotate the original record.",
+    "expected": {
+      "route": "ctx-prd",
+      "authorization": "execute-after-approval",
+      "durable_state": "prd",
+      "mode": "interview",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "prd-only",
+    "prompt": "Write a PRD for the approved renewal reminder concept. Do not implement it.",
+    "expected": {
+      "route": "ctx-prd",
+      "authorization": "artifact-only",
+      "durable_state": "prd",
+      "mode": "artifact",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "settled-feature",
+    "prompt": "Add the already-approved CSV export button using the existing download endpoint and current design-system button pattern.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "none",
+      "mode": "implementation",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "debug-and-fix",
+    "prompt": "Fix the token refresh bug that logs users out after a successful refresh response.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "none",
+      "mode": "debugging",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "debug-analysis-only",
+    "prompt": "Analyze why the token refresh path logs users out, but do not change code.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "analysis-only",
+      "durable_state": "none",
+      "mode": "debugging",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "explicit-tdd",
+    "prompt": "Use TDD to add the approved per-account rate-limit behavior.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "none",
+      "mode": "testing",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "review-feedback",
+    "prompt": "Evaluate and apply these code-review comments where they are technically correct.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "none",
+      "mode": "review",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "standalone-qa",
+    "prompt": "QA this existing checkout page thoroughly and report findings. Do not fix anything and do not create a durable report.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "analysis-only",
+      "durable_state": "none",
+      "mode": "focused-qa",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "prd-qa-campaign",
+    "prompt": "Resume the approved Action-First Copilot PRD at G3 and run the mobile safety QA campaign, recording durable evidence for the gate.",
+    "expected": {
+      "route": "ctx-prd",
+      "authorization": "execute-now",
+      "durable_state": "qa-campaign",
+      "mode": "gate",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "explicit-handoff",
+    "prompt": "Park this Lean work so the next session can continue from the current branch.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "git-handoff",
+      "mode": "handoff",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "explicit-worktree",
+    "prompt": "Create a worktree, then fix the approved email-validation bug there.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "none",
+      "mode": "debugging",
+      "worktree": "explicit"
+    }
+  }
+]

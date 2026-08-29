@@ -1,0 +1,9 @@
+{
+  "runtime": "claude-code",
+  "skills": [
+    "ctx-prd",
+    "ctx-lean"
+  ],
+  "source_sha256": "427af37d46084fed0e4b8813acc9d4168554a49602530061ec2949e55d697dec",
+  "version": "0.1.0"
+}

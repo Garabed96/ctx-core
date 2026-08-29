@@ -1,0 +1,9 @@
+{
+  "author": {
+    "name": "Garo Nazarian"
+  },
+  "description": "Continuity-first product and technical execution through two deep workflows: PRD and Lean.",
+  "name": "ctx",
+  "skills": "./skills/",
+  "version": "0.1.0"
+}
