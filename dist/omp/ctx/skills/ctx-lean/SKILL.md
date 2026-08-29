@@ -31,9 +31,9 @@ Acceptance: <observable proof>
 Current slice: <smallest complete vertical change>
 ```
 
-Do not create a plan or checkpoint artifact. Surface the slice only when the user requested planning or it clarifies a consequential boundary.
+Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, use it for lifecycle continuity. If ownership is materially ambiguous, call `AskOne`. Do not create a compact or separate PRD for Lean work.
 
-Completion criterion: the current slice can produce end-to-end observable value without speculative machinery.
+Do not create a plan, checkpoint, or handoff artifact. Surface the slice only when the user requested planning or it clarifies a consequential boundary.
 
 ## 2. Apply five checks
 
@@ -61,12 +61,16 @@ Before mutation, read `references/continuity-execution.md`, `references/runtime-
 
 Implement the current slice through the existing source-of-truth path. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
 
-Run the strongest focused proof for the changed surface. For focused QA, exercise the actual requested flows and report evidence directly; Lean creates no durable QA note unless the user explicitly requests one.
+Run the strongest focused proof for the changed surface. For focused QA, exercise the actual requested flows and report evidence directly; Lean creates no separate durable QA note unless the user explicitly requests one.
 
 Finish applicable cleanup only after the behavior is proven: focused contract tests, affected source-of-truth documentation, and obsolete scaffold removal. Do not create post-hoc checkpoint documents.
 
-Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, and every completion claim is bounded by fresh evidence.
+When an encompassing PRD exists, patch its current checkpoint after each material change in execution truth and before yielding. Record only current status, verified evidence, the active decision, and one next action; never add an implementation journal or duplicate the task plan.
 
-## 5. Optional handoff
+Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, the owning PRD is current when one exists, and every completion claim is bounded by fresh evidence.
 
-Persist nothing by default. When the user explicitly asks to park or hand off Lean work, call `WriteGitHandoff` with exactly Goal, Verified, Blocked, Next, and Branch. Resume through `ReadGitHandoff`; discard mismatched or consumed state as defined by the continuity contract.
+## 5. Preserve PRD continuity
+
+The encompassing Obsidian PRD is the only durable continuity artifact. Parking sets its lifecycle status to `paused`, preserves its current gate, and updates the current checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, then verifies its recorded repository and runtime state before acting.
+
+Standalone Lean work with no encompassing PRD remains ephemeral. Escalate to `ctx-prd` only for unresolved consequential product decisions; never create a mini-PRD or a separate handoff merely to persist Lean state.

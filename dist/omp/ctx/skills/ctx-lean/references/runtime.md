@@ -10,7 +10,7 @@ Use `ask` with one question, 2–5 concise options, and `recommended` set. Put t
 
 Use the `obsidian-war-room` MCP tools through their `xd://mcp__obsidian_war_room_*` routes. Use vault search/get operations for discovery, create/patch/property operations for content, rename operations for adaptive folder promotion, Canvas operations for visual review, and binary-file operations for attachments. Activate a known inactive Obsidian tool through the catalog when needed.
 
-Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. If the connector cannot reach the intended vault, report the missing capability and stop PRD work; never create a local fallback PRD.
+Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. PRD creates its canonical artifact; Lean patches only an existing encompassing PRD. If the connector cannot reach the intended vault, report the missing capability and stop any operation whose durable PRD write is required; never create a filesystem fallback.
 
 ## `InspectSurface`
 
@@ -23,7 +23,3 @@ Require explicit human authorization first. Use `ctx_workflow` with `create_work
 ## `TeardownWorktree`
 
 On an explicit cleanup request, use `ctx_workflow` with `kill_worktree`. Preserve its refusal for the primary worktree, dirty or unmerged state, and ambiguous targets unless the user deliberately authorizes the exact override supported by the runtime. Use `hub` to stop only a verified managed process.
-
-## Git-local handoff
-
-Use one Git command to resolve `git rev-parse --git-path ctx-core/handoff.md`, then `read` or `write` the resolved path. Create only its parent directory. Compare the embedded Branch with `git branch --show-current` before using it.

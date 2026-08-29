@@ -10,7 +10,7 @@ Ask one plain-text question with 2–5 concise options and identify the recommen
 
 Use the configured Obsidian MCP connector when available. Prefer its native search, get, create, patch, rename, Canvas, and attachment operations so Obsidian preserves links and metadata. A working `obsidian` CLI targeting the intended live vault is also acceptable.
 
-Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. If neither connector can reach the intended vault, report the missing capability and stop PRD work; never create a local fallback PRD.
+Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. PRD creates its canonical artifact; Lean patches only an existing encompassing PRD. If neither connector can reach the intended vault, report the missing capability and stop any operation whose durable PRD write is required; never create a local fallback.
 
 ## `InspectSurface`
 
@@ -23,7 +23,3 @@ First establish explicit human authorization. Then inspect the repository root, 
 ## `TeardownWorktree`
 
 Resolve the named target from outside that worktree when possible. Refuse the primary worktree, dirty state, unmerged branch, or ambiguous target unless the user explicitly overrides that exact guard. Stop target services only when their identity is verified. Remove the worktree, then delete its branch only when merged or explicitly authorized.
-
-## Git-local handoff
-
-Use Git to resolve `git rev-parse --git-path ctx-core/handoff.md`; use file tools to read or write the resolved path. Create only its parent directory. Validate the embedded Branch against `git branch --show-current` before using it.

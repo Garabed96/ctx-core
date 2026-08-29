@@ -110,13 +110,13 @@
     }
   },
   {
-    "id": "explicit-handoff",
-    "prompt": "Park this Lean work so the next session can continue from the current branch.",
+    "id": "explicit-prd-checkpoint",
+    "prompt": "Park this Lean work under the active Factory V2 PRD so the next session can resume it.",
     "expected": {
       "route": "ctx-lean",
       "authorization": "execute-now",
-      "durable_state": "git-handoff",
-      "mode": "handoff",
+      "durable_state": "prd",
+      "mode": "checkpoint",
       "worktree": "not-authorized"
     }
   },

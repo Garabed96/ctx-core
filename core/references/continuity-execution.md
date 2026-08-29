@@ -53,18 +53,16 @@ When already in a suitable branch or worktree, continue there without another wo
 
 Teardown is a separate destructive operation. Run `TeardownWorktree` only on an explicit cleanup request and preserve every runtime safety refusal unless the user deliberately overrides that exact condition.
 
-## Resume and handoff
+## Resume and continuity
 
-PRD resume reads the canonical Obsidian lifecycle state and then verifies its recorded branch/worktree against current Git state.
+Resume PRD-owned work from the canonical Obsidian lifecycle state and current checkpoint, then verify recorded branch/worktree and runtime claims against current evidence.
 
-Lean reconstructs from the current prompt, repository, and Git state. It persists nothing by default. When the user explicitly requests a handoff, call `WriteGitHandoff` with exactly:
+When Lean work is encompassed by an existing PRD:
 
-```text
-Goal: <one sentence>
-Verified: <fresh evidence or “none”>
-Blocked: <external blocker or “none”>
-Next: <one concrete action>
-Branch: <exact branch>
-```
+1. resolve that PRD from explicit project context or existing links;
+2. update its lifecycle status and current checkpoint after each material change in execution truth;
+3. record only verified evidence, the active decision, and one concrete next action;
+4. on park, set `status: paused` while preserving `current_gate`;
+5. on resume, read the PRD first and verify its repository/runtime claims before acting.
 
-On resume, ignore a Git-local handoff whose Branch does not match. After its contents are incorporated, remove it unless the user asks to retain it.
+If several PRDs could own the work and the choice changes durable state, call `AskOne`. Never create a compact PRD or separate handoff for Lean work. Standalone Lean work with no encompassing PRD reconstructs from the prompt, repository, and runtime evidence.

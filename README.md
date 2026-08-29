@@ -67,16 +67,9 @@ Use it for:
 - TDD requests;
 - verification and analysis.
 
-Lean holds only:
+Lean holds Goal, Boundaries, Acceptance, and Current slice ephemerally. It creates no separate plan, checkpoint, QA sheet, or handoff.
 
-```text
-Goal
-Boundaries
-Acceptance
-Current slice
-```
-
-It creates no plan, checkpoint, QA sheet, or handoff by default.
+When an existing canonical PRD encompasses the work, Lean keeps that PRD current after material changes in execution truth. Parking and resume use the PRD's lifecycle status and `Current checkpoint`; standalone Lean work remains ephemeral.
 
 Its proportional references cover:
 
@@ -84,7 +77,7 @@ Its proportional references cover:
 - **Testing** — defend observable contracts; use red–green–refactor when valuable.
 - **Review feedback** — verify each suggestion before accepting or rejecting it.
 
-An optional five-line Git-local handoff is written only when explicitly requested.
+The canonical Obsidian PRD is the only durable continuity artifact. Lean never creates a mini-PRD or Git-local handoff.
 
 ## Execution principles
 

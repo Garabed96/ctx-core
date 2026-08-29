@@ -69,7 +69,7 @@ Completion criterion: the canonical PRD and linked artifacts state exactly what 
 
 ## 5. Resume or amend
 
-Resume from Obsidian lifecycle state, then verify recorded branch/worktree state against Git before acting.
+Resume from the Obsidian lifecycle state and current checkpoint, then verify recorded branch/worktree and runtime claims before acting.
 
 When an approved decision changes, pause execution, amend only the affected decision and gate, and append one material amendment with date and rationale. Do not reopen settled gates unless the changed decision invalidates their evidence.
 

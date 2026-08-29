@@ -39,9 +39,9 @@ updated: YYYY-MM-DD
 ---
 ```
 
-PRD status is one of `draft`, `approved`, `active`, `blocked`, `complete`, or `abandoned`. Gate status is one of `pending`, `active`, `passed`, `failed`, or `blocked`.
+PRD status is one of `draft`, `approved`, `active`, `paused`, `blocked`, `complete`, or `abandoned`. Gate status is one of `pending`, `active`, `passed`, `failed`, or `blocked`.
 
-Keep frontmatter factual and queryable. Do not encode implementation tasks, worker state, or duplicated evidence there.
+Keep frontmatter factual and queryable. `paused` means intentionally deprioritized with a resumable checkpoint; `blocked` means an external prerequisite prevents progress. Do not encode implementation tasks, worker state, or duplicated evidence there.
 
 ## One-page core
 
@@ -62,6 +62,12 @@ Use only the sections that carry a current decision:
 | Decision | Rationale |
 |---|---|
 | ... | ... |
+
+
+## Current checkpoint
+- Verified: none
+- Decision: none
+- Next: <one concrete action>
 
 ## Gates
 ### G1 — <observable vertical slice>
@@ -88,7 +94,7 @@ An explicit chat approval or checked approval box is sufficient. On approval:
 - set `status: approved` when implementation is not authorized;
 - set `status: active` and activate G1 when implementation is authorized.
 
-After every gate attempt, write its status, verifier, and concise evidence links before any advancement. Set `current_gate` to the active gate, or `null` only when no gate is active. The PRD is stale—and the gate incomplete—until this write succeeds.
+After every gate attempt, write its status, verifier, and concise evidence links before any advancement. After each material Lean change inside this PRD, replace `Current checkpoint` with fresh verified evidence, the active decision, and one concrete next action. Parking sets `status: paused` without clearing `current_gate`; resuming sets `status: active` only after repository and runtime claims are verified. The PRD is stale until the required lifecycle write succeeds.
 
 ## Canvas
 
