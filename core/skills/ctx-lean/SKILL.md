@@ -31,7 +31,7 @@ Acceptance: <observable proof>
 Current slice: <smallest complete vertical change>
 ```
 
-Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, use it for lifecycle continuity. If ownership is materially ambiguous, call `AskOne`. Do not create a compact or separate PRD for Lean work.
+Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, and checkpoint for lifecycle continuity. If ownership is materially ambiguous, call `AskOne`. Do not create a compact or separate PRD for Lean work.
 
 Do not create a plan, checkpoint, or handoff artifact. Surface the slice only when the user requested planning or it clarifies a consequential boundary.
 
@@ -57,20 +57,24 @@ These are proportional references, not additional workflows.
 
 ## 4. Execute and prove
 
-Before mutation, read `references/continuity-execution.md`, `references/runtime-interface.md`, and `references/runtime.md`.
+Before mutation, read `references/continuity-execution.md`, `references/prd-checkpoint.md`, `references/runtime-interface.md`, and `references/runtime.md`.
+
+When a canonical PRD owns the work, call `PrdCheckpoint` with `assert-active` at the exact revision before source mutation. Drift, an inactive gate, or an unavailable durable write stops PRD-owned execution until reconciled.
 
 Implement the current slice through the existing source-of-truth path. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
 
 Run the strongest focused proof for the changed surface. For focused QA, exercise the actual requested flows and report evidence directly; Lean creates no separate durable QA note unless the user explicitly requests one.
 
+After every material change in execution truth, call `PrdCheckpoint` with `update`, `block`, `resume`, `fail`, or `pass` as appropriate before unrelated work or yield. Record only current status, verified evidence, the active decision, one next action, and repository pointers; never add an implementation journal or duplicate the task plan.
+
 Finish applicable cleanup only after the behavior is proven: focused contract tests, affected source-of-truth documentation, and obsolete scaffold removal. Do not create post-hoc checkpoint documents.
 
-When an encompassing PRD exists, patch its current checkpoint after each material change in execution truth and before yielding. Record only current status, verified evidence, the active decision, and one next action; never add an implementation journal or duplicate the task plan.
+Before merging PRD-owned work, require `assert-merge`; after merging, require `record-merge`. Standalone Lean work has no PRD merge barrier.
 
-Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, the owning PRD is current when one exists, and every completion claim is bounded by fresh evidence.
+Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, every owning-PRD checkpoint is attested at its returned revision, and every completion claim is bounded by fresh evidence.
 
 ## 5. Preserve PRD continuity
 
-The encompassing Obsidian PRD is the only durable continuity artifact. Parking sets its lifecycle status to `paused`, preserves its current gate, and updates the current checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, then verifies its recorded repository and runtime state before acting.
+The encompassing Obsidian PRD is the only durable continuity artifact. Parking calls `PrdCheckpoint` with `pause`, preserving its current gate and replacing its checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, verifies recorded repository and runtime state, then calls `resume`.
 
 Standalone Lean work with no encompassing PRD remains ephemeral. Escalate to `ctx-prd` only for unresolved consequential product decisions; never create a mini-PRD or a separate handoff merely to persist Lean state.

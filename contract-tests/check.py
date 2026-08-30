@@ -28,6 +28,7 @@ EXPECTED_REFERENCES = {
         "artifact-contract.md",
         "continuity-execution.md",
         "product-interview.md",
+        "prd-checkpoint.md",
         "qa-evidence.md",
         "runtime-interface.md",
         "runtime.md",
@@ -35,6 +36,7 @@ EXPECTED_REFERENCES = {
     "ctx-lean": {
         "continuity-execution.md",
         "debugging.md",
+        "prd-checkpoint.md",
         "review-feedback.md",
         "runtime-interface.md",
         "runtime.md",
@@ -158,6 +160,48 @@ def validate_composition(repo: Path) -> None:
                         )
 
 
+def validate_checkpoint_contract(repo: Path) -> None:
+    checkpoint = (repo / "core" / "references" / "prd-checkpoint.md").read_text()
+    transitions = {
+        "assert-active",
+        "activate",
+        "update",
+        "block",
+        "resume",
+        "pass",
+        "fail",
+        "pause",
+        "assert-merge",
+        "record-merge",
+    }
+    for transition in transitions:
+        require(f"`{transition}`" in checkpoint, f"checkpoint transition is missing: {transition}")
+
+    runtime_interface = (repo / "core" / "references" / "runtime-interface.md").read_text()
+    continuity = (repo / "core" / "references" / "continuity-execution.md").read_text()
+    require("`PrdCheckpoint`" in runtime_interface, "runtime interface omits PrdCheckpoint")
+    require("## PRD checkpoint and merge barrier" in continuity, "merge barrier contract is missing")
+
+    artifact = (
+        repo / "core" / "skills" / "ctx-prd" / "references" / "artifact-contract.md"
+    ).read_text()
+    for field in ("revision: r1", "- Gate:", "- Status:", "- Repository:"):
+        require(field in artifact, f"PRD checkpoint field is missing: {field}")
+
+    for skill_name in EXPECTED_SKILLS:
+        skill = (repo / "core" / "skills" / skill_name / "SKILL.md").read_text()
+        require("`PrdCheckpoint`" in skill, f"{skill_name} does not cross PrdCheckpoint")
+        require(
+            "references/prd-checkpoint.md" in skill,
+            f"{skill_name} does not load the checkpoint contract",
+        )
+
+    for runtime in RUNTIMES:
+        adapter = (repo / "adapters" / runtime / "runtime.md").read_text()
+        require("## `PrdCheckpoint`" in adapter, f"{runtime} adapter omits PrdCheckpoint")
+        require("expected_revision" in adapter, f"{runtime} adapter omits revision checking")
+        require("re-read" in adapter, f"{runtime} adapter omits checkpoint attestation")
+
 def validate_cases(repo: Path, results_path: Path | None) -> int:
     cases = json.loads((repo / "contract-tests" / "cases.json").read_text())
     ids = [case["id"] for case in cases]
@@ -188,6 +232,7 @@ def main() -> None:
     repo = Path(__file__).resolve().parents[1]
     try:
         validate_composition(repo)
+        validate_checkpoint_contract(repo)
         case_count = validate_cases(repo, args.results)
     except (AssertionError, KeyError, json.JSONDecodeError) as error:
         print(f"FAIL: {error}", file=sys.stderr)

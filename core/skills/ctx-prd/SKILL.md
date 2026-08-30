@@ -43,33 +43,36 @@ Completion criterion: Obsidian contains one canonical, link-valid PRD whose outc
 
 Approval may be an explicit statement in chat or the PRD approval checkbox. Record approver, timestamp, and lifecycle status in frontmatter before execution.
 
-If the original request authorized only the PRD, stop after approval. If it authorized implementation, activate Gate 1.
+If the original request authorized only the PRD, stop after approval. If it authorized implementation, continue to gate execution; Gate 1 activates only through `PrdCheckpoint`.
 
 Completion criterion: approval state in the canonical PRD matches the user's actual authorization.
 
 ## 4. Execute one gate
 
-Before mutation, read `references/continuity-execution.md`, `references/runtime-interface.md`, and `references/runtime.md`.
+Before mutation, read `references/continuity-execution.md`, `references/prd-checkpoint.md`, `references/runtime-interface.md`, and `references/runtime.md`.
 
 For the current gate only:
 
-1. Re-read its observable outcome, constraints, and verifier.
-2. Implement the smallest complete vertical slice that can satisfy it.
-3. Produce the verifier's required evidence.
-4. For an evidence matrix, read [QA Evidence](references/qa-evidence.md), create or update a separate descriptively named QA campaign note, and link it.
-5. Update the PRD immediately with gate status, verifier, and concise evidence links.
+1. Re-read its observable outcome, constraints, named verifier, canonical path, and revision.
+2. Call `PrdCheckpoint` with `activate`, or `assert-active` when already active. Source mutation waits for its attestation.
+3. Implement the smallest complete vertical slice that can satisfy the gate.
+4. Produce the named verifier's required evidence.
+5. For an evidence matrix, read [QA Evidence](references/qa-evidence.md), create or update a separate descriptively named QA campaign note, and link it.
+6. Call `PrdCheckpoint` with the resulting `update`, `block`, `fail`, or `pass` transition and re-read the returned revision.
 
-A gate is not complete until Step 5 is written. Never put scenario results, implementation journals, worker reports, or task checklists in the PRD.
+Checkpoint every material change in execution truth before unrelated work or yield. Record current truth and durable evidence, not scenario results, implementation journals, worker reports, or task checklists.
 
-- Automated-verifier PASS advances to the next gate.
-- Human-verifier gates stop with evidence ready and wait for explicit acceptance.
+- Automated-verifier PASS may call `pass` and advance only after the attested write.
+- Human-verifier gates stop with evidence ready; call `pass` only after explicit acceptance.
 - FAIL or BLOCKED remains recorded and does not advance.
 
-Completion criterion: the canonical PRD and linked artifacts state exactly what the named verifier observed before any next-gate work begins.
+Before merging PRD-owned work, call `assert-merge` at the exact expected revision. After a successful merge, call `record-merge` with the PR and commit pointer. A gate, merge, or completion claim is invalid until its checkpoint succeeds.
+
+Completion criterion: the canonical PRD and linked artifacts state exactly what the named verifier observed, and `PrdCheckpoint` returns the attested revision before any next-gate work begins.
 
 ## 5. Resume or amend
 
-Resume from the Obsidian lifecycle state and current checkpoint, then verify recorded branch/worktree and runtime claims before acting.
+Resume from the Obsidian lifecycle state and current checkpoint. Capture its exact revision, then verify recorded branch/worktree and runtime claims before calling `resume` or `assert-active`.
 
 When an approved decision changes, pause execution, amend only the affected decision and gate, and append one material amendment with date and rationale. Do not reopen settled gates unless the changed decision invalidates their evidence.
 

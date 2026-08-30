@@ -130,5 +130,27 @@
       "mode": "debugging",
       "worktree": "explicit"
     }
+  },
+  {
+    "id": "prd-gate-blocker-resolution",
+    "prompt": "Resume the approved Open Job Desk G0 PRD, resolve its OAuth blocker, verify the named human gate, and merge only after the canonical gate passes.",
+    "expected": {
+      "route": "ctx-prd",
+      "authorization": "execute-now",
+      "durable_state": "prd",
+      "mode": "gate",
+      "worktree": "not-authorized"
+    }
+  },
+  {
+    "id": "settled-fix-under-active-prd",
+    "prompt": "Fix the approved responsive viewport bug inside the active G0 PRD and keep its canonical checkpoint current.",
+    "expected": {
+      "route": "ctx-lean",
+      "authorization": "execute-now",
+      "durable_state": "prd",
+      "mode": "implementation",
+      "worktree": "not-authorized"
+    }
   }
 ]

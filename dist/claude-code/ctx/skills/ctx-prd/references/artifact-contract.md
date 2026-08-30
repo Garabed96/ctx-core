@@ -29,6 +29,7 @@ If a flat PRD later gains siblings, use `ObsidianArtifactStore` to move it into 
 title: <Feature> — PRD
 type: ctx-prd
 status: draft
+revision: r1
 current_gate: null
 branch: null
 worktree: null
@@ -65,9 +66,12 @@ Use only the sections that carry a current decision:
 
 
 ## Current checkpoint
+- Gate: null
+- Status: pending
 - Verified: none
 - Decision: none
 - Next: <one concrete action>
+- Repository: none
 
 ## Gates
 ### G1 — <observable vertical slice>
@@ -94,7 +98,7 @@ An explicit chat approval or checked approval box is sufficient. On approval:
 - set `status: approved` when implementation is not authorized;
 - set `status: active` and activate G1 when implementation is authorized.
 
-After every gate attempt, write its status, verifier, and concise evidence links before any advancement. After each material Lean change inside this PRD, replace `Current checkpoint` with fresh verified evidence, the active decision, and one concrete next action. Parking sets `status: paused` without clearing `current_gate`; resuming sets `status: active` only after repository and runtime claims are verified. The PRD is stale until the required lifecycle write succeeds.
+After every gate attempt and material Lean change inside this PRD, call `PrdCheckpoint` as defined in `references/prd-checkpoint.md`. Replace `Current checkpoint` with fresh gate status, verified evidence, the active decision, one concrete next action, and current repository pointer. Parking preserves `current_gate`; resuming requires repository and runtime verification. The PRD is stale until the revision-safe checkpoint succeeds and is re-read.
 
 ## Canvas
 

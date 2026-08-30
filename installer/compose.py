@@ -15,7 +15,11 @@ RUNTIMES = {
     "omp": ".omp-plugin",
 }
 SKILLS = ("ctx-prd", "ctx-lean")
-SHARED_REFERENCES = ("continuity-execution.md", "runtime-interface.md")
+SHARED_REFERENCES = (
+    "continuity-execution.md",
+    "prd-checkpoint.md",
+    "runtime-interface.md",
+)
 BUILD_MARKER = ".ctx-core-build.json"
 
 

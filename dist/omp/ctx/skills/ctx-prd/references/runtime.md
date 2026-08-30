@@ -12,6 +12,12 @@ Use the `obsidian-war-room` MCP tools through their `xd://mcp__obsidian_war_room
 
 Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. PRD creates its canonical artifact; Lean patches only an existing encompassing PRD. If the connector cannot reach the intended vault, report the missing capability and stop any operation whose durable PRD write is required; never create a filesystem fallback.
 
+## `PrdCheckpoint`
+
+Read `references/prd-checkpoint.md`. Resolve the exact canonical note through `ObsidianArtifactStore`, then perform one compare-and-patch operation whose precondition includes `expected_revision`. Prefer a connector operation that updates the full checkpoint transaction atomically. Otherwise use the live Obsidian CLI's in-process `app.vault.process` primitive; independent best-effort patches do not satisfy this capability.
+
+Apply only the validated lifecycle transition, advance the note's existing revision convention, then re-read the frontmatter, owning gate, and `Current checkpoint` through the connector. Return those observed fields as the attestation. Zero matches, revision drift, partial writes, unavailable atomic mutation, or failed re-read stop the caller before source mutation, merge, advancement, or yield.
+
 ## `InspectSurface`
 
 Use `xd://browser` for web behavior: open once, observe structure first, interact, and use screenshots only for appearance or durable evidence. Use the applicable simulator/device skill and tool for native surfaces. Use `hub` for long-running services. Exercise terminal and backend surfaces through their actual runtime rather than inferring behavior from source.

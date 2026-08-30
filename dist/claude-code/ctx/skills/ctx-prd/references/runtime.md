@@ -12,6 +12,12 @@ Use the configured Obsidian MCP connector when available. Prefer its native sear
 
 Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. PRD creates its canonical artifact; Lean patches only an existing encompassing PRD. If neither an Obsidian connector nor a working CLI can reach the intended vault, report the missing capability and stop any operation whose durable PRD write is required.
 
+## `PrdCheckpoint`
+
+Read `references/prd-checkpoint.md`. Resolve the exact canonical note through `ObsidianArtifactStore`, then perform one compare-and-patch operation whose precondition includes `expected_revision`. Prefer a connector operation that updates the full checkpoint transaction atomically. Otherwise use the live Obsidian CLI's in-process `app.vault.process` primitive; independent best-effort patches do not satisfy this capability.
+
+Apply only the validated lifecycle transition, advance the note's existing revision convention, then re-read the frontmatter, owning gate, and `Current checkpoint` through the connector. Return those observed fields as the attestation. Zero matches, revision drift, partial writes, unavailable atomic mutation, or failed re-read stop the caller before source mutation, merge, advancement, or yield.
+
 ## `InspectSurface`
 
 Use the strongest runtime-native surface available: browser automation for web UI, simulator/device tooling for native UI, direct CLI interaction for terminal products, and focused service calls for backend behavior. Reuse an authenticated user browser only when the task requires that session. Capture screenshots only for visual claims or durable QA evidence.

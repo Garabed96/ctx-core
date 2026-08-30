@@ -53,6 +53,8 @@ The PRD owns decisions, gates, status, verifiers, and evidence links. Detailed t
 
 A gate is not complete until the canonical PRD records its result and evidence.
 
+Gate lifecycle changes cross one revision-checked `PrdCheckpoint` seam. Source mutation requires an attested active gate; blockers and verifier results replace the current checkpoint immediately; PRD-owned merges require a passed gate at the expected revision and record the resulting PR/commit before closure.
+
 ## `ctx-lean`
 
 `ctx-lean` completes settled technical work through the smallest complete vertical slice.
@@ -69,7 +71,7 @@ Use it for:
 
 Lean holds Goal, Boundaries, Acceptance, and Current slice ephemerally. It creates no separate plan, checkpoint, QA sheet, or handoff.
 
-When an existing canonical PRD encompasses the work, Lean keeps that PRD current after material changes in execution truth. Parking and resume use the PRD's lifecycle status and `Current checkpoint`; standalone Lean work remains ephemeral.
+When an existing canonical PRD encompasses the work, Lean reads its revision and active gate before mutation, then uses `PrdCheckpoint` after material changes in execution truth. Parking, resume, and merge share the same fail-closed lifecycle seam; standalone Lean work remains ephemeral.
 
 Its proportional references cover:
 
@@ -90,6 +92,7 @@ Both workflows share the same contract:
 - Bugs are verified through the original reproduction.
 - Worktrees are never created automatically.
 - The user’s original verb determines whether implementation is authorized.
+- PRD lifecycle writes are revision-checked and re-read before execution, advancement, merge, or completion claims.
 
 ## Install
 
@@ -150,7 +153,7 @@ It explored broad development orchestration. `ctx-core` keeps the useful continu
 
 ## Status
 
-**v0.1.0 — Alpha**
+**v0.2.0 — Alpha**
 
 ## License
 

@@ -28,7 +28,7 @@ Main defines each lane's inputs, owned files or evidence, output contract, and s
 2. Select the smallest complete vertical slice.
 3. Make the source-of-truth change; migrate affected callers and remove obsolete paths.
 4. Exercise the changed behavior through the strongest available surface.
-5. Record only workflow state and durable evidence required by the active workflow.
+5. When a canonical PRD owns the work, call `PrdCheckpoint` for the resulting material truth before unrelated work or yield.
 6. Claim only what the observed proof establishes.
 
 ## Claim-specific proof
@@ -45,6 +45,18 @@ Main defines each lane's inputs, owned files or evidence, output contract, and s
 
 Partial evidence supports only a partial claim. Evidence becomes stale after a relevant mutation.
 
+## PRD checkpoint and merge barrier
+
+PRD-owned execution crosses one lifecycle seam: `PrdCheckpoint` in `references/prd-checkpoint.md`. Read the canonical revision before mutation; callers never patch lifecycle fields or gate evidence directly.
+
+- Source mutation requires an attested active gate at the expected revision.
+- Material blocker, resolution, evidence, verifier, pause, and failure changes require a write checkpoint before unrelated work or yield.
+- A merge requires `assert-merge` against a passed gate and matching repository evidence.
+- A completed merge requires `record-merge` before the branch or gate is called closed.
+- Revision drift, a partial write, or an unavailable canonical store fails closed.
+
+Standalone Lean work has no PRD checkpoint or merge barrier.
+
 ## Worktrees
 
 Never create a worktree automatically. Explicit authorization exists only when the user asks for one or accepts a specific worktree proposal. If authorization is absent, use `AskOne`; if declined, continue in the current tree.
@@ -60,9 +72,10 @@ Resume PRD-owned work from the canonical Obsidian lifecycle state and current ch
 When Lean work is encompassed by an existing PRD:
 
 1. resolve that PRD from explicit project context or existing links;
-2. update its lifecycle status and current checkpoint after each material change in execution truth;
-3. record only verified evidence, the active decision, and one concrete next action;
-4. on park, set `status: paused` while preserving `current_gate`;
-5. on resume, read the PRD first and verify its repository/runtime claims before acting.
+2. capture its exact revision, current gate, and checkpoint;
+3. call `assert-active` before mutation;
+4. call the appropriate write transition after each material change in execution truth;
+5. on park, call `pause` while preserving `current_gate`;
+6. on resume, verify repository/runtime claims before calling `resume`.
 
 If several PRDs could own the work and the choice changes durable state, call `AskOne`. Never create a compact PRD or separate handoff for Lean work. Standalone Lean work with no encompassing PRD reconstructs from the prompt, repository, and runtime evidence.
