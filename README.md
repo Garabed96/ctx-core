@@ -153,7 +153,7 @@ It explored broad development orchestration. `ctx-core` keeps the useful continu
 
 ## Status
 
-**v0.2.0 — Alpha**
+**v0.2.1 — Alpha**
 
 ## License
 

@@ -167,6 +167,7 @@ def validate_checkpoint_contract(repo: Path) -> None:
         "activate",
         "update",
         "block",
+        "amend",
         "resume",
         "pass",
         "fail",

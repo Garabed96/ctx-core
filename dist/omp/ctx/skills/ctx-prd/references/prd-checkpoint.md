@@ -10,7 +10,7 @@ Input:
 path: exact canonical Obsidian PRD path
 expected_revision: revision read by the caller
 gate: owning gate identifier
-transition: assert-active | activate | update | block | resume | pass | fail | pause | assert-merge | record-merge
+transition: assert-active | activate | amend | update | block | resume | pass | fail | pause | assert-merge | record-merge
 verified: concise observed evidence or durable links
 decision: current material decision, when one changed
 next_action: exactly one concrete next action
@@ -36,6 +36,7 @@ The revision format remains local to the PRD. The adapter advances it consistent
 |---|---|---|
 | `assert-active` | named gate is active at `expected_revision` | read-only attestation |
 | `activate` | named gate is pending and execution is authorized | gate active; checkpoint created |
+| `amend` | named gate is pending, or lifecycle is paused; explicit approval covers the contract change | affected decision and gate replaced; one amendment appended; gate does not activate |
 | `update` | named gate is active or blocked | current verified truth replaces stale checkpoint truth |
 | `block` | named gate is active | gate blocked with reason and one next action |
 | `resume` | named gate is blocked or lifecycle is paused | gate active with blocker resolution evidence |

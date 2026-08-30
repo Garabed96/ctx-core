@@ -74,6 +74,6 @@ Completion criterion: the canonical PRD and linked artifacts state exactly what 
 
 Resume from the Obsidian lifecycle state and current checkpoint. Capture its exact revision, then verify recorded branch/worktree and runtime claims before calling `resume` or `assert-active`.
 
-When an approved decision changes, pause execution, amend only the affected decision and gate, and append one material amendment with date and rationale. Do not reopen settled gates unless the changed decision invalidates their evidence.
+When an approved decision changes, pause active execution, then call `PrdCheckpoint` with `amend` at the exact revision. Replace only the affected decision and gate, append one material amendment with date and rationale, and preserve pending status unless implementation was separately authorized. Do not reopen settled gates unless the change invalidated their evidence.
 
 Overall completion requires every gate passed by its named verifier, the PRD marked complete, and every evidence link resolved.
