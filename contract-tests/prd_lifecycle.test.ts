@@ -100,8 +100,9 @@ afterEach(async () => {
   await Promise.all(temporaryPaths.splice(0).map((item) => rm(item, { recursive: true, force: true })));
 });
 
-function fakeSchema(): any {
+function fakeSchema(kind = "scalar"): any {
   const schema: any = {
+    kind,
     min: () => schema,
     optional: () => schema,
     regex: () => schema,
@@ -117,9 +118,9 @@ function loadExtension() {
     zod: {
       enum: () => fakeSchema(),
       literal: () => fakeSchema(),
-      object: () => fakeSchema(),
+      object: () => fakeSchema("object"),
       string: () => fakeSchema(),
-      union: () => fakeSchema(),
+      union: () => fakeSchema("union"),
     },
     on(event: string, handler: Function) {
       handlers.set(event, handler);
@@ -139,6 +140,11 @@ function context(sessionId: string) {
 }
 
 describe("OMP PRD lifecycle controller", () => {
+  test("registers an object-rooted tool schema", () => {
+    const { tool } = loadExtension();
+    expect(tool.parameters.kind).toBe("object");
+  });
+
   test("activates through the checkpoint command and guards source mutation", async () => {
     const vault = await mkdtemp(path.join(tmpdir(), "ctx-core-omp-lifecycle-"));
     temporaryPaths.push(vault);

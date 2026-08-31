@@ -178,24 +178,21 @@ export default function prdLifecycle(pi: ExtensionAPI) {
     expectedRevision: z.string().regex(/^r[1-9]\d*$/),
     gate: z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/),
   };
-  const parameters = z.union([
-    z.object({
-      ...baseParameters,
-      event: z.enum(Object.keys(transitions) as [keyof typeof transitions, ...(keyof typeof transitions)[]]),
-      verified: z.string().min(1),
-      blockers: z.string().min(1),
-      decision: z.string().min(1),
-      nextAction: z.string().min(1),
-      occurredAt: z.string().min(1),
-      verification: verification.optional(),
-      mergeAssertion: z.string().min(1).optional(),
-      amendment: amendment.optional(),
-    }).strict(),
-    z.object({
-      ...baseParameters,
-      event: z.enum(Object.keys(guards) as [keyof typeof guards, ...(keyof typeof guards)[]]),
-    }).strict(),
-  ]);
+  const parameters = z.object({
+    ...baseParameters,
+    event: z.enum([
+      ...Object.keys(transitions),
+      ...Object.keys(guards),
+    ] as [LifecycleEvent, ...LifecycleEvent[]]),
+    verified: z.string().min(1).optional(),
+    blockers: z.string().min(1).optional(),
+    decision: z.string().min(1).optional(),
+    nextAction: z.string().min(1).optional(),
+    occurredAt: z.string().min(1).optional(),
+    verification: verification.optional(),
+    mergeAssertion: z.string().min(1).optional(),
+    amendment: amendment.optional(),
+  }).strict();
 
   runtime.registerTool({
     name: "ctx_prd_lifecycle",
