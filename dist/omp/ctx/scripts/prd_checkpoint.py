@@ -28,6 +28,7 @@ from prd_document import (
     section_span as document_section_span,
     validate_prd,
 )
+import prd_arming
 
 FRONTMATTER = re.compile(r"\A---\n(?P<body>.*?)\n---(?P<tail>\n|\Z)", re.DOTALL)
 REVISION = re.compile(r"r(?P<number>[1-9]\d*)\Z")
@@ -1257,6 +1258,63 @@ def _atomic_guard(
         return guard_document(note.read_text(encoding="utf-8"), request, action, vault_root)
 
 
+DISARMING_TRANSITIONS = {"pause"}
+
+
+def _record_arming(vault_root: Path, result: dict[str, str]) -> None:
+    """Refresh the on-disk arming record after a successful call.
+
+    See ``prd_arming`` for why a hook-driven Claude Code runtime needs this
+    where OMP holds an in-memory session binding instead. Best-effort: a
+    failure here must never fail the surrounding checkpoint command.
+    """
+    try:
+        prd_arming.arm(
+            Path.cwd(),
+            vault_root=vault_root,
+            path=result["path"],
+            gate=result["current_gate"],
+            revision=result["revision"],
+        )
+    except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
+        print(f"warning: prd_checkpoint arming update failed: {error}", file=sys.stderr)
+
+
+def _settle_arming(vault_root: Path, transition: str, result: dict[str, str]) -> None:
+    """Refresh or clear the on-disk arming record after a successful transition.
+
+    Cleared after ``pause`` and after a ``pass`` that completes every gate.
+    Pausing exists to park work for an unknown, possibly cross-session
+    interval; leaving the record armed would let a later, unrelated turn in
+    the same repository trip the source-mutation guard for a PRD nobody is
+    resuming. A completed PRD can never reactivate a gate, so its record
+    would otherwise block that repository's bash/edit tools forever. OMP
+    has neither failure mode: its binding simply disappears with the
+    session, and both cases already fail closed there through PRD state
+    alone (lifecycle_status != "active").
+
+    ``record-merge`` deliberately stays armed even though it also leaves no
+    gate active: OMP's binding keeps refusing source-mutation for a
+    multi-gate PRD between one gate's ``record-merge`` and the next gate's
+    ``activate`` (gate_status stays "passed", not "active"), and clearing
+    the record here would silently under-enforce that same gap versus OMP.
+    Only ``activate`` (or another successful transition) re-arms it, which
+    naturally still happens moments later in the ordinary flow.
+
+    Best-effort: never raises.
+    """
+    settles = transition in DISARMING_TRANSITIONS or (
+        transition == "pass" and result.get("lifecycle_status") == "complete"
+    )
+    if settles:
+        try:
+            prd_arming.disarm(Path.cwd())
+        except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
+            print(f"warning: prd_checkpoint arming clear failed: {error}", file=sys.stderr)
+        return
+    _record_arming(vault_root, result)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault-root", required=True, type=Path)
@@ -1280,6 +1338,7 @@ def main() -> int:
                 GuardRequest.from_json(value),
                 args.guard,
             )
+            _record_arming(args.vault_root, result)
         elif args.validate:
             result = _atomic_validate(args.vault_root, _validation_path(value))
         elif args.migrate:
@@ -1292,6 +1351,7 @@ def main() -> int:
             )
         else:
             result = _atomic_transition(args.vault_root, Request.from_json(value))
+            _settle_arming(args.vault_root, result["transition"], result)
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         failure = {"code": "invalid_request", "message": str(error)}
         print(json.dumps(failure, sort_keys=True), file=sys.stderr)

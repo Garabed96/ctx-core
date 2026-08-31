@@ -31,7 +31,7 @@ Acceptance: <observable proof>
 Current slice: <smallest complete vertical change>
 ```
 
-Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, checkpoint, and that gate's single linked plan. Verify the plan links back to the PRD and keeps Outcome, Reuse decisions, Implementation slice, Parallel execution contract, Verification, and Non-goals in canonical order.
+Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, checkpoint, and that gate's single linked plan; `PrdCheckpoint` validates the plan's structure and backlink.
 
 Do not create a standalone plan, checkpoint, or handoff artifact. PRD-owned execution uses the already-linked gate plan; standalone Lean work remains ephemeral.
 
@@ -57,9 +57,9 @@ These are proportional references, not additional workflows.
 
 ## 4. Execute and prove
 
-Before mutation, read `references/continuity-execution.md`, `references/prd-checkpoint.md`, `references/runtime-interface.md`, and `references/runtime.md`.
+Before mutation, read `references/continuity-execution.md`, `references/runtime-interface.md`, and `references/runtime.md`. When a canonical PRD owns the work, also read `references/prd-checkpoint.md`.
 
-When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation. Drift, an inactive gate, a missing or invalid linked plan, or an unavailable durable write stops PRD-owned execution; runtime guards refuse the edit until reconciled.
+When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation; it fails closed, and a refused edit is reconciled before proceeding.
 
 Implement the current slice through the existing source-of-truth path. Follow the linked plan's ownership contract without turning it into runtime-specific orchestration: lanes name responsibilities, interfaces, and disjoint files, never a provider or model. When an independent UI lane applies, it uses the `impeccable` skill. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
 
@@ -71,7 +71,7 @@ Finish applicable cleanup only after the behavior is proven: focused contract te
 
 Before merging PRD-owned work, require `assert-merge`; after merging, require `record-merge`. Standalone Lean work has no PRD merge barrier.
 
-Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, every owning-PRD checkpoint is attested at its returned revision, and every completion claim is bounded by fresh evidence.
+Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, every owning-PRD checkpoint has succeeded, and every completion claim is bounded by fresh evidence.
 
 ## 5. Preserve PRD continuity
 

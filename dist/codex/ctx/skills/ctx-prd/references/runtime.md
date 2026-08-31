@@ -18,6 +18,8 @@ Read `references/prd-checkpoint.md`. Resolve the canonical local vault root and 
 
 The command validates the exact PRD hierarchy and all linked plans, holds a per-note lock, checks `expected_revision` and the legal transition, atomically replaces the complete PRD, then re-reads and returns a content-hash attestation. Invalid structure, missing plans, revision drift, illegal transitions, stale repository state, partial writes, or failed re-reads stop source mutation, merge, advancement, or yield.
 
+Packaged `PreToolUse` and `Stop` hooks enforce the source-mutation and nonterminal-yield seams once a repository is armed by a successful checkpoint call. A structurally valid complete PRD may settle. Hooks fail open with a warning on wrapper faults and remain guardrails rather than a complete enforcement boundary; keep the prose instructions above as the backstop.
+
 ## `InspectSurface`
 
 Use the strongest installed Codex surface: browser or Chrome plugins for web behavior, simulator/device tooling for native UI, direct terminal interaction for CLI products, and focused service calls for backend behavior. Reuse an authenticated browser only when required. Capture screenshots only for visual claims or durable QA evidence.

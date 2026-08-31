@@ -3,6 +3,7 @@
     "name": "Garo Nazarian"
   },
   "description": "Continuity-first product and technical execution through two deep workflows: PRD and Lean.",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "capabilities": [
       "Interactive",

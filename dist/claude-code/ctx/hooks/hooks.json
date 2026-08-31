@@ -1,0 +1,26 @@
+{
+  "description": "Enforce the PrdCheckpoint source-mutation and yield guards deterministically once a PRD gate has been attested in this repository.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre_tool_use.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop.py"
+          }
+        ]
+      }
+    ]
+  }
+}
