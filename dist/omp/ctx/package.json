@@ -1,0 +1,14 @@
+{
+  "name": "ctx",
+  "omp": {
+    "description": "Continuity-first product and technical execution through two deep workflows: PRD and Lean.",
+    "extensions": [
+      "./extensions/prd-lifecycle.ts"
+    ],
+    "name": "CTX Core",
+    "version": "0.3.1"
+  },
+  "private": true,
+  "type": "module",
+  "version": "0.3.1"
+}

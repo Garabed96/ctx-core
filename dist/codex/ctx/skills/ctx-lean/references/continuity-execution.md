@@ -47,13 +47,15 @@ Partial evidence supports only a partial claim. Evidence becomes stale after a r
 
 ## PRD checkpoint and merge barrier
 
-PRD-owned execution crosses one lifecycle seam: `PrdCheckpoint` in `references/prd-checkpoint.md`. Read the canonical revision before mutation; callers never patch lifecycle fields or gate evidence directly.
+PRD-owned execution crosses one lifecycle seam: the packaged `PrdCheckpoint` state machine in `references/prd-checkpoint.md`. Read the canonical revision and current gate's linked plan before mutation; callers never patch lifecycle fields or gate evidence directly.
 
-- Source mutation requires an attested active gate at the expected revision.
-- Material blocker, resolution, evidence, verifier, pause, and failure changes require a write checkpoint before unrelated work or yield.
+- Source mutation requires an attested active gate at the expected revision. Attestation first validates the canonical PRD shape, deterministic plan path, backlink, plan structure, and numeric gate order. OMP fails closed on every bash call and repository-write tool through its `tool_call` guard.
+- The repository fingerprint in `Current checkpoint` must match before nonterminal yield, next-gate work, or merge. OMP's `session_stop` guard continues the turn when active work is stale; a structurally valid complete PRD may settle because no active gate can refresh that fingerprint.
+- Material blocker, resolution, evidence, verifier, pause, retry, and failure changes require a write checkpoint before unrelated work or yield.
+- A failed gate returns to active only through `retry` with remediation evidence.
 - A merge requires `assert-merge` against a passed gate and matching repository evidence.
-- A completed merge requires `record-merge` before the branch or gate is called closed.
-- Revision drift, a partial write, or an unavailable canonical store fails closed.
+- A completed merge requires `record-merge` with the same-revision assertion before the branch or gate is called closed.
+- Revision drift, an illegal transition, a partial write, or an unavailable canonical store fails closed.
 
 Standalone Lean work has no PRD checkpoint or merge barrier.
 
@@ -73,9 +75,9 @@ When Lean work is encompassed by an existing PRD:
 
 1. resolve that PRD from explicit project context or existing links;
 2. capture its exact revision, current gate, and checkpoint;
-3. call `assert-active` before mutation;
-4. call the appropriate write transition after each material change in execution truth;
-5. on park, call `pause` while preserving `current_gate`;
-6. on resume, verify repository/runtime claims before calling `resume`.
+3. invoke `gate.assert-active` before mutation;
+4. invoke the appropriate lifecycle event after each material change in execution truth;
+5. on park, invoke `workflow.pause` while preserving `current_gate`;
+6. on resume, verify repository/runtime claims before invoking `gate.resume` or `gate.retry`.
 
 If several PRDs could own the work and the choice changes durable state, call `AskOne`. Never create a compact PRD or separate handoff for Lean work. Standalone Lean work with no encompassing PRD reconstructs from the prompt, repository, and runtime evidence.

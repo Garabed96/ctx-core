@@ -133,6 +133,40 @@ def validate_composition(repo: Path) -> None:
             require(manifest["name"] == "ctx", f"{runtime} plugin name drifted")
             require(bool(manifest.get("version")), f"{runtime} plugin version is missing")
 
+            checkpoint_command = first / "scripts" / "prd_checkpoint.py"
+            require(
+                checkpoint_command.is_file(),
+                f"{runtime} checkpoint command is missing",
+            )
+            require(
+                checkpoint_command.stat().st_mode & 0o111 != 0,
+                f"{runtime} checkpoint command is not executable",
+            )
+            require(
+                (first / "scripts" / "prd_document.py").is_file(),
+                f"{runtime} canonical document validator is missing",
+            )
+            if runtime == "omp":
+                require(
+                    (first / "extensions" / "prd-lifecycle.ts").is_file(),
+                    "omp lifecycle extension is missing",
+                )
+                require(
+                    (first / "package.json").is_file(),
+                    "omp local package manifest is missing",
+                )
+                package = json.loads((first / "package.json").read_text())
+                require(package["name"] == "ctx", "omp local package name drifted")
+                require(
+                    package["version"] == manifest["version"],
+                    "omp local package version drifted",
+                )
+                require(
+                    package.get("omp", {}).get("extensions")
+                    == ["./extensions/prd-lifecycle.ts"],
+                    "omp local package omits lifecycle extension",
+                )
+
             skills_root = first / "skills"
             skills = {item.name for item in skills_root.iterdir() if item.is_dir()}
             require(skills == EXPECTED_SKILLS, f"{runtime} exposes unexpected skills: {sorted(skills)}")
@@ -169,6 +203,7 @@ def validate_checkpoint_contract(repo: Path) -> None:
         "block",
         "amend",
         "resume",
+        "retry",
         "pass",
         "fail",
         "pause",
@@ -186,8 +221,30 @@ def validate_checkpoint_contract(repo: Path) -> None:
     artifact = (
         repo / "core" / "skills" / "ctx-prd" / "references" / "artifact-contract.md"
     ).read_text()
-    for field in ("revision: r1", "- Gate:", "- Status:", "- Repository:"):
-        require(field in artifact, f"PRD checkpoint field is missing: {field}")
+    for field in (
+        "revision: r1",
+        "- Gate:",
+        "- Status:",
+        "- Verified:",
+        "- Blockers:",
+        "- Decision:",
+        "- Next:",
+        "- Repository:",
+        "- **Feature list:**",
+        "- **Implementation plan:**",
+    ):
+        require(field in artifact, f"canonical PRD field is missing: {field}")
+    for section in (
+        "## Outcome",
+        "## Boundaries",
+        "## Decisions",
+        "## Current checkpoint",
+        "## Gates",
+        "## Approval",
+        "## Evidence",
+        "## Amendments",
+    ):
+        require(section in artifact, f"canonical PRD section is missing: {section}")
 
     for skill_name in EXPECTED_SKILLS:
         skill = (repo / "core" / "skills" / skill_name / "SKILL.md").read_text()
@@ -202,6 +259,42 @@ def validate_checkpoint_contract(repo: Path) -> None:
         require("## `PrdCheckpoint`" in adapter, f"{runtime} adapter omits PrdCheckpoint")
         require("expected_revision" in adapter, f"{runtime} adapter omits revision checking")
         require("re-read" in adapter, f"{runtime} adapter omits checkpoint attestation")
+        require(
+            "scripts/prd_checkpoint.py" in adapter or "ctx_prd_lifecycle" in adapter,
+            f"{runtime} adapter omits the executable checkpoint seam",
+        )
+
+    omp_extension = (
+        repo / "adapters" / "omp" / "extensions" / "prd-lifecycle.ts"
+    ).read_text()
+    for contract in (
+        "ctx_prd_lifecycle",
+        'runtime.on("tool_call"',
+        'runtime.on("session_stop"',
+        '"source-mutation"',
+        '"yield"',
+    ):
+        require(contract in omp_extension, f"omp enforcement omits: {contract}")
+
+def validate_checkpoint_behavior(repo: Path) -> None:
+    commands = (
+        [sys.executable, str(repo / "contract-tests" / "test_prd_checkpoint.py")],
+        [sys.executable, str(repo / "contract-tests" / "test_prd_protocol.py")],
+        ["bun", "test", "./contract-tests/prd_lifecycle.test.ts"],
+    )
+    for command in commands:
+        completed = subprocess.run(
+            command,
+            cwd=repo,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        require(
+            completed.returncode == 0,
+            completed.stderr or completed.stdout,
+        )
+
 
 def validate_cases(repo: Path, results_path: Path | None) -> int:
     cases = json.loads((repo / "contract-tests" / "cases.json").read_text())
@@ -234,8 +327,9 @@ def main() -> None:
     try:
         validate_composition(repo)
         validate_checkpoint_contract(repo)
+        validate_checkpoint_behavior(repo)
         case_count = validate_cases(repo, args.results)
-    except (AssertionError, KeyError, json.JSONDecodeError) as error:
+    except (AssertionError, KeyError, OSError, json.JSONDecodeError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         raise SystemExit(1) from error
 

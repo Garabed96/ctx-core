@@ -75,6 +75,29 @@ def compose(runtime: str, output: Path | None) -> Path:
     target.mkdir(parents=True)
 
     source_paths = [core / "plugin.json", adapter]
+    scripts = core / "scripts"
+    shutil.copytree(
+        scripts,
+        target / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    source_paths.extend(
+        path
+        for path in scripts.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    )
+
+    adapter_root = adapter.parent
+    for asset in sorted(adapter_root.iterdir()):
+        if asset == adapter:
+            continue
+        destination = target / asset.name
+        if asset.is_dir():
+            shutil.copytree(asset, destination)
+            source_paths.extend(path for path in asset.rglob("*") if path.is_file())
+        else:
+            shutil.copy2(asset, destination)
+            source_paths.append(asset)
     for skill_name in SKILLS:
         source_skill = core / "skills" / skill_name
         target_skill = target / "skills" / skill_name
@@ -111,6 +134,22 @@ def compose(runtime: str, output: Path | None) -> Path:
     (manifest_dir / "plugin.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     )
+    if runtime == "omp":
+        package = {
+            "name": metadata["name"],
+            "version": metadata["version"],
+            "private": True,
+            "type": "module",
+            "omp": {
+                "name": "CTX Core",
+                "version": metadata["version"],
+                "description": metadata["description"],
+                "extensions": ["./extensions/prd-lifecycle.ts"],
+            },
+        }
+        (target / "package.json").write_text(
+            json.dumps(package, indent=2, sort_keys=True) + "\n"
+        )
 
     build = {
         "runtime": runtime,

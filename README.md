@@ -31,29 +31,24 @@ It:
 
 Obsidian is required for PRD work. There is no repository Markdown fallback.
 
-A small effort may remain one note:
+Every initiative uses one deterministic hierarchy:
 
 ```text
-CTX PRDs/
-  Action-First Copilot — PRD.md
+<initiative>/
+  PRD/
+    <ticket-or-slug>.md
+  Planning/
+    <ticket-or-slug>-g1-<gate-slug>.md
+    <ticket-or-slug>-g2-<gate-slug>.md
 ```
 
-When the effort gains QA, visual review, or attachments, it becomes a folder:
+The PRD always uses Outcome, Boundaries, Decisions, Current checkpoint, Gates, Approval, Evidence, and Amendments in that order. Every gate contains a concise Feature list and exactly one linked ctx-lean plan. Plans link back and own implementation detail, reuse decisions, lane ownership, and verification.
 
-```text
-CTX PRDs/
-  Action-First Copilot/
-    Action-First Copilot — PRD.md
-    Action-First Copilot — Mobile QA.md
-    Action-First Copilot — Card Review.canvas
-    Attachments/
-```
+The PRD owns product decisions, gates, status, verifiers, and evidence links. Detailed implementation belongs to linked plans; test results remain in descriptively named QA campaign notes. Canvas is presentation-only.
 
-The PRD owns decisions, gates, status, verifiers, and evidence links. Detailed test results remain in separate, descriptively named QA campaign notes. Canvas is presentation-only.
+A gate is not complete until the canonical PRD records its result and evidence. It cannot activate until its plan resolves, links back, follows the plan contract, and every predecessor passes.
 
-A gate is not complete until the canonical PRD records its result and evidence.
-
-Gate lifecycle changes cross one revision-checked `PrdCheckpoint` seam. Source mutation requires an attested active gate; blockers and verifier results replace the current checkpoint immediately; PRD-owned merges require a passed gate at the expected revision and record the resulting PR/commit before closure.
+Gate lifecycle changes cross one executable, revision-checked `PrdCheckpoint` state machine. It structurally validates the PRD and plans, legal transitions, verifier identity, gate order, repository fingerprints, and merge assertions; writes atomically; and returns a reread content-hash attestation. The same command provides read-only validation and deterministic migration from older PRDs.
 
 ## `ctx-lean`
 
@@ -92,7 +87,9 @@ Both workflows share the same contract:
 - Bugs are verified through the original reproduction.
 - Worktrees are never created automatically.
 - The user’s original verb determines whether implementation is authorized.
-- PRD lifecycle writes are revision-checked and re-read before execution, advancement, merge, or completion claims.
+- PRD lifecycle writes run through the packaged state machine and are structurally validated, revision-checked, atomically replaced, and re-read before execution, advancement, merge, yield, or completion claims.
+
+OMP exposes the state machine as the essential `ctx_prd_lifecycle` tool. Its extension arms a source-mutation guard when `skill://ctx-prd` is read and blocks session settlement while the repository fingerprint differs from `Current checkpoint`. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root, or pass `vaultRoot` to the tool. Claude Code and Codex distributions include the same `scripts/prd_checkpoint.py` command.
 
 ## Install
 
@@ -153,7 +150,15 @@ It explored broad development orchestration. `ctx-core` keeps the useful continu
 
 ## Status
 
-**v0.2.1 — Alpha**
+**v0.3.1 — Alpha**
+
+### v0.3.1
+
+- Canonicalized deterministic `<initiative>/PRD/` and `<initiative>/Planning/` paths.
+- Added exact PRD and gate structure validation plus linked-plan backlink, ordering, and ownership checks.
+- Made parallel lanes model-agnostic while requiring `impeccable` for applicable UI work.
+- Added checkpoint blockers without discarding accepted contextual bullets.
+- Added revision-safe v0.3.0 migration that preserves decisions, evidence, amendments, and unknown history while refusing fabricated plans or product content.
 
 ## License
 

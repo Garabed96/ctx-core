@@ -31,9 +31,9 @@ Acceptance: <observable proof>
 Current slice: <smallest complete vertical change>
 ```
 
-Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, and checkpoint for lifecycle continuity. If ownership is materially ambiguous, call `AskOne`. Do not create a compact or separate PRD for Lean work.
+Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, checkpoint, and that gate's single linked plan. Verify the plan links back to the PRD and keeps Outcome, Reuse decisions, Implementation slice, Parallel execution contract, Verification, and Non-goals in canonical order.
 
-Do not create a plan, checkpoint, or handoff artifact. Surface the slice only when the user requested planning or it clarifies a consequential boundary.
+Do not create a standalone plan, checkpoint, or handoff artifact. PRD-owned execution uses the already-linked gate plan; standalone Lean work remains ephemeral.
 
 ## 2. Apply five checks
 
@@ -59,13 +59,13 @@ These are proportional references, not additional workflows.
 
 Before mutation, read `references/continuity-execution.md`, `references/prd-checkpoint.md`, `references/runtime-interface.md`, and `references/runtime.md`.
 
-When a canonical PRD owns the work, call `PrdCheckpoint` with `assert-active` at the exact revision before source mutation. Drift, an inactive gate, or an unavailable durable write stops PRD-owned execution until reconciled.
+When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation. Drift, an inactive gate, a missing or invalid linked plan, or an unavailable durable write stops PRD-owned execution; runtime guards refuse the edit until reconciled.
 
-Implement the current slice through the existing source-of-truth path. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
+Implement the current slice through the existing source-of-truth path. Follow the linked plan's ownership contract without turning it into runtime-specific orchestration: lanes name responsibilities, interfaces, and disjoint files, never a provider or model. When an independent UI lane applies, it uses the `impeccable` skill. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
 
 Run the strongest focused proof for the changed surface. For focused QA, exercise the actual requested flows and report evidence directly; Lean creates no separate durable QA note unless the user explicitly requests one.
 
-After every material change in execution truth, call `PrdCheckpoint` with `update`, `block`, `resume`, `fail`, or `pass` as appropriate before unrelated work or yield. Record only current status, verified evidence, the active decision, one next action, and repository pointers; never add an implementation journal or duplicate the task plan.
+After every material change in execution truth, invoke `PrdCheckpoint` with `update`, `block`, `resume`, `retry`, `fail`, or `pass` as appropriate before unrelated work or yield. Record only current status, verified evidence, the active decision, one next action, and the deterministic repository fingerprint; never add an implementation journal or duplicate the task plan.
 
 Finish applicable cleanup only after the behavior is proven: focused contract tests, affected source-of-truth documentation, and obsolete scaffold removal. Do not create post-hoc checkpoint documents.
 
@@ -75,6 +75,6 @@ Completion criterion: the requested observable outcome is proven, affected calls
 
 ## 5. Preserve PRD continuity
 
-The encompassing Obsidian PRD is the only durable continuity artifact. Parking calls `PrdCheckpoint` with `pause`, preserving its current gate and replacing its checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, verifies recorded repository and runtime state, then calls `resume`.
+The encompassing Obsidian PRD is the only durable continuity artifact. Parking invokes `PrdCheckpoint` with `pause`, preserving its current gate and replacing its checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, verifies recorded repository and runtime state, then invokes `resume` for blocked/paused work or `retry` for a failed gate.
 
 Standalone Lean work with no encompassing PRD remains ephemeral. Escalate to `ctx-prd` only for unresolved consequential product decisions; never create a mini-PRD or a separate handoff merely to persist Lean state.

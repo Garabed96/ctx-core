@@ -8,15 +8,19 @@ Use `ask` with one question, 2–5 concise options, and `recommended` set. Put t
 
 ## `ObsidianArtifactStore`
 
-Use the `obsidian-war-room` MCP tools through their `xd://mcp__obsidian_war_room_*` routes. Use vault search/get operations for discovery, create/patch/property operations for content, rename operations for adaptive folder promotion, Canvas operations for visual review, and binary-file operations for attachments. Activate a known inactive Obsidian tool through the catalog when needed.
+Use the mounted Obsidian MCP tools through their `xd://mcp__obsidian_*` routes. Use `vault_get_document_map` before targeted reads or patches, vault read/write operations for artifacts, rename operations for adaptive folder promotion, and Canvas or attachment operations when available. The connector may be backed by Obsidian Local REST API; lifecycle fields still cross `PrdCheckpoint`, never independent MCP patches.
 
 Resolve the vault and PRD root from explicit user/project context or an existing related PRD. Never scan unrelated personal notes. PRD creates its canonical artifact; Lean patches only an existing encompassing PRD. If the connector cannot reach the intended vault, report the missing capability and stop any operation whose durable PRD write is required; never create a filesystem fallback.
 
 ## `PrdCheckpoint`
 
-Read `references/prd-checkpoint.md`. Resolve the exact canonical note through `ObsidianArtifactStore`, then perform one compare-and-patch operation whose precondition includes `expected_revision`. Prefer a connector operation that updates the full checkpoint transaction atomically. Otherwise use the live Obsidian CLI's in-process `app.vault.process` primitive; independent best-effort patches do not satisfy this capability.
+Read `references/prd-checkpoint.md`. Invoke the essential `ctx_prd_lifecycle` tool for every lifecycle event. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root or pass `vaultRoot`; every transition passes the vault-relative PRD path, exact `expectedRevision` (mapped to `expected_revision`), and non-empty `verified`, `blockers`, `decision`, `nextAction`, and `occurredAt` fields. Guards require only the path, revision, gate, and repository fingerprint computed by the adapter. The adapter calls the packaged state machine and returns the re-read content-hash attestation.
 
-Apply only the validated lifecycle transition, advance the note's existing revision convention, then re-read the frontmatter, owning gate, and `Current checkpoint` through the connector. Return those observed fields as the attestation. Zero matches, revision drift, partial writes, unavailable atomic mutation, or failed re-read stop the caller before source mutation, merge, advancement, or yield.
+Use `gate.activate` or `gate.assert-active` before PRD-owned source mutation; `verifier.accepted` or `verifier.rejected` for named verifier results; `gate.block`, `gate.resume`, `gate.retry`, `gate.update`, or `workflow.pause` for execution truth; and `merge.assert` followed by `merge.record` for merge truth. Never patch PRD lifecycle fields through Obsidian MCP.
+
+Resolve the absolute installed plugin root, then use `<plugin-root>/scripts/prd_checkpoint.py --validate` and `--migrate` for protocol maintenance. Validation is read-only; migration requires the exact revision and timestamp and performs one atomic PRD replacement.
+
+The extension arms a source-mutation guard only when the `skill://ctx-prd` resource is read. It fails closed on every bash call and repository-write tool without an active gate attestation and runs a repository-fingerprint guard before nonterminal session settlement. A structurally valid complete PRD may settle without matching the obsolete active-work fingerprint. Canonical-shape, missing-plan, stale-checkpoint, revision, transition, verifier, and attestation failures all fail closed.
 
 ## `InspectSurface`
 

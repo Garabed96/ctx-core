@@ -14,9 +14,9 @@ Resolve the vault and PRD root from explicit user/project context or an existing
 
 ## `PrdCheckpoint`
 
-Read `references/prd-checkpoint.md`. Resolve the exact canonical note through `ObsidianArtifactStore`, then perform one compare-and-patch operation whose precondition includes `expected_revision`. Prefer a connector operation that updates the full checkpoint transaction atomically. Otherwise use the live Obsidian CLI's in-process `app.vault.process` primitive; independent best-effort patches do not satisfy this capability.
+Read `references/prd-checkpoint.md`. Resolve the canonical local vault root and the runtime-provided absolute installed plugin root, then invoke Python with `<plugin-root>/scripts/prd_checkpoint.py --vault-root <root>` and one JSON transition request—including current `blockers` or `none`—on stdin. Use its `--guard source-mutation` before PRD-owned repository edits and `--guard yield` before settlement. Use `--validate` for read-only structural validation and `--migrate` for revision-safe v0.3.1 migration. Never patch PRD lifecycle fields through the Obsidian connector.
 
-Apply only the validated lifecycle transition, advance the note's existing revision convention, then re-read the frontmatter, owning gate, and `Current checkpoint` through the connector. Return those observed fields as the attestation. Zero matches, revision drift, partial writes, unavailable atomic mutation, or failed re-read stop the caller before source mutation, merge, advancement, or yield.
+The command validates the exact PRD hierarchy and all linked plans, holds a per-note lock, checks `expected_revision` and the legal transition, atomically replaces the complete PRD, then re-reads and returns a content-hash attestation. Invalid structure, missing plans, revision drift, illegal transitions, stale repository state, partial writes, or failed re-reads stop source mutation, merge, advancement, or yield.
 
 ## `InspectSurface`
 
