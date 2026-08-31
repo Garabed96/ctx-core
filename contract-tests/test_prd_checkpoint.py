@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -14,6 +15,22 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 COMMAND = REPO / "core" / "scripts" / "prd_checkpoint.py"
+
+sys.path.insert(0, str(COMMAND.parent))
+import prd_arming  # noqa: E402 - path must be extended first
+
+
+def arming_record(repository_root: Path, state_dir: Path) -> dict[str, str] | None:
+    """Read the on-disk arming record written by a subprocess's own CTX_ARM_STATE_DIR."""
+    previous = os.environ.get("CTX_ARM_STATE_DIR")
+    os.environ["CTX_ARM_STATE_DIR"] = str(state_dir)
+    try:
+        return prd_arming.read(repository_root)
+    finally:
+        if previous is None:
+            os.environ.pop("CTX_ARM_STATE_DIR", None)
+        else:
+            os.environ["CTX_ARM_STATE_DIR"] = previous
 
 PRD = """---
 title: Example — PRD
@@ -157,7 +174,14 @@ class CheckpointCommandTest(unittest.TestCase):
             if not target.exists():
                 target.write_text(plan(gate, prd_path), encoding="utf-8")
 
-    def invoke(self, vault: Path, request: dict[str, object]) -> subprocess.CompletedProcess[str]:
+    def invoke(
+        self,
+        vault: Path,
+        request: dict[str, object],
+        *,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         self.ensure_plans(vault)
         return subprocess.run(
             [sys.executable, str(COMMAND), "--vault-root", str(vault)],
@@ -165,12 +189,17 @@ class CheckpointCommandTest(unittest.TestCase):
             capture_output=True,
             text=True,
             check=False,
+            cwd=str(cwd) if cwd is not None else None,
+            env=env,
         )
     def guard(
         self,
         vault: Path,
         action: str,
         request: dict[str, object],
+        *,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         self.ensure_plans(vault)
         return subprocess.run(
@@ -186,6 +215,8 @@ class CheckpointCommandTest(unittest.TestCase):
             capture_output=True,
             text=True,
             check=False,
+            cwd=str(cwd) if cwd is not None else None,
+            env=env,
         )
 
 
@@ -973,6 +1004,317 @@ class CheckpointCommandTest(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertEqual(json.loads(completed.stdout)["revision"], "r2")
+
+
+class ArmingStateTest(unittest.TestCase):
+    """Focused tests for the on-disk arming record the Claude Code hooks read.
+
+    Every transition/guard invocation below runs with a distinct CWD and
+    CTX_ARM_STATE_DIR so it cannot collide with other tests or a real
+    developer's arming state. Deliberately a sibling of
+    ``CheckpointCommandTest``, not a subclass, so its unrelated tests are not
+    re-run under this class too.
+    """
+
+    ensure_plans = staticmethod(CheckpointCommandTest.ensure_plans)
+    invoke = CheckpointCommandTest.invoke
+    guard = CheckpointCommandTest.guard
+
+    def test_activate_arms_and_pause_disarms(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                tempfile.TemporaryDirectory() as repo_dir, \
+                tempfile.TemporaryDirectory() as state_dir:
+            vault = Path(temporary)
+            repo = Path(repo_dir)
+            path = Path("Example Initiative/PRD/example.md")
+            note = vault / path
+            note.parent.mkdir(parents=True)
+            note.write_text(PRD, encoding="utf-8")
+            env = {**os.environ, "CTX_ARM_STATE_DIR": state_dir}
+
+            self.assertIsNone(arming_record(repo, Path(state_dir)))
+
+            activated = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r1",
+                    "gate": "G1",
+                    "transition": "activate",
+                    "verified": "Approval recorded for Gate 1 execution.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Implement the G1 vertical slice.",
+                    "repository": "branch feat/example",
+                    "occurred_at": "2026-08-31T10:00:00Z",
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(activated.returncode, 0, activated.stderr)
+
+            record = arming_record(repo, Path(state_dir))
+            self.assertIsNotNone(record)
+            self.assertEqual(record["path"], str(path))
+            self.assertEqual(record["gate"], "G1")
+            self.assertEqual(record["expected_revision"], "r2")
+
+            paused = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r2",
+                    "gate": "G1",
+                    "transition": "pause",
+                    "verified": "Session parked with current evidence.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Resume G1 later.",
+                    "repository": "branch feat/example",
+                    "occurred_at": "2026-08-31T10:05:00Z",
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(paused.returncode, 0, paused.stderr)
+            self.assertIsNone(arming_record(repo, Path(state_dir)))
+
+    def test_guard_source_mutation_call_refreshes_arming(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                tempfile.TemporaryDirectory() as repo_dir, \
+                tempfile.TemporaryDirectory() as state_dir:
+            vault = Path(temporary)
+            repo = Path(repo_dir)
+            path = Path("Example Initiative/PRD/example.md")
+            note = vault / path
+            note.parent.mkdir(parents=True)
+            active = (
+                PRD.replace("status: approved", "status: active")
+                .replace("revision: r1", "revision: r2")
+                .replace("current_gate: null", "current_gate: G1")
+            )
+            active = set_gate_status(active, "G1", "active")
+            active = set_checkpoint(
+                active,
+                {
+                    "Gate": "G1",
+                    "Status": "active",
+                    "Verified": "Approval recorded.",
+                    "Blockers": "none",
+                    "Decision": "unchanged",
+                    "Next": "Continue G1.",
+                    "Repository": "branch feat/example",
+                },
+            )
+            note.write_text(active, encoding="utf-8")
+            env = {**os.environ, "CTX_ARM_STATE_DIR": state_dir}
+
+            self.assertIsNone(arming_record(repo, Path(state_dir)))
+
+            guarded = self.guard(
+                vault,
+                "source-mutation",
+                {
+                    "path": str(path),
+                    "expected_revision": "r2",
+                    "gate": "G1",
+                    "repository": "claude-code-pre-tool-use",
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(guarded.returncode, 0, guarded.stderr)
+
+            record = arming_record(repo, Path(state_dir))
+            self.assertIsNotNone(record)
+            self.assertEqual(record["gate"], "G1")
+            self.assertEqual(record["expected_revision"], "r2")
+
+    def test_record_merge_stays_armed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                tempfile.TemporaryDirectory() as repo_dir, \
+                tempfile.TemporaryDirectory() as state_dir:
+            vault = Path(temporary)
+            repo = Path(repo_dir)
+            path = Path("Example Initiative/PRD/example.md")
+            note = vault / path
+            note.parent.mkdir(parents=True)
+            active = (
+                PRD.replace("status: approved", "status: active")
+                .replace("revision: r1", "revision: r2")
+                .replace("current_gate: null", "current_gate: G1")
+            )
+            active = set_gate_status(active, "G1", "active")
+            active = set_checkpoint(
+                active,
+                {
+                    "Gate": "G1",
+                    "Status": "active",
+                    "Verified": "Approval recorded.",
+                    "Blockers": "none",
+                    "Decision": "unchanged",
+                    "Next": "Verify G1.",
+                    "Repository": "branch feat/example commit abc123",
+                },
+            )
+            note.write_text(active, encoding="utf-8")
+            env = {**os.environ, "CTX_ARM_STATE_DIR": state_dir}
+
+            passed = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r2",
+                    "gate": "G1",
+                    "transition": "pass",
+                    "verified": "Focused contract command passed: evidence://run-123.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Assert merge readiness.",
+                    "repository": "branch feat/example commit abc123",
+                    "occurred_at": "2026-08-31T10:10:00Z",
+                    "verification": {
+                        "kind": "automated",
+                        "identity": "focused contract command",
+                        "status": "accepted",
+                    },
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertEqual(json.loads(passed.stdout)["lifecycle_status"], "active")
+            record = arming_record(repo, Path(state_dir))
+            self.assertIsNotNone(record)
+            self.assertEqual(record["expected_revision"], "r3")
+
+            asserted = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r3",
+                    "gate": "G1",
+                    "transition": "assert-merge",
+                    "verified": "G1 passed and repository commit abc123 is current.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Merge the approved branch.",
+                    "repository": "branch feat/example commit abc123",
+                    "occurred_at": "2026-08-31T10:15:00Z",
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(asserted.returncode, 0, asserted.stderr)
+            merge_assertion = json.loads(asserted.stdout)["merge_assertion"]
+
+            recorded = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r3",
+                    "gate": "G1",
+                    "transition": "record-merge",
+                    "verified": "PR #42 merged at def456.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Activate G2.",
+                    "repository": "PR #42 merge def456",
+                    "occurred_at": "2026-08-31T10:20:00Z",
+                    "merge_assertion": merge_assertion,
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(recorded.returncode, 0, recorded.stderr)
+
+            # Deliberate deviation from OMP's binding lifetime: record-merge
+            # leaves no gate active, but the record stays armed because OMP's
+            # own binding would still refuse source-mutation here too
+            # (gate_status stays "passed", not "active") until the next
+            # gate's activate. Clearing it would under-enforce that gap.
+            record = arming_record(repo, Path(state_dir))
+            self.assertIsNotNone(record)
+            self.assertEqual(record["expected_revision"], "r4")
+            self.assertEqual(record["gate"], "G1")
+
+    def test_final_gate_pass_disarms(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                tempfile.TemporaryDirectory() as repo_dir, \
+                tempfile.TemporaryDirectory() as state_dir:
+            vault = Path(temporary)
+            repo = Path(repo_dir)
+            path = Path("Example Initiative/PRD/example.md")
+            note = vault / path
+            note.parent.mkdir(parents=True)
+            active = (
+                PRD.replace("status: approved", "status: active")
+                .replace("revision: r1", "revision: r4")
+                .replace("current_gate: null", "current_gate: G2")
+            )
+            active = set_gate_status(active, "G1", "passed")
+            active = set_gate_status(active, "G2", "active")
+            active = set_checkpoint(
+                active,
+                {
+                    "Gate": "G2",
+                    "Status": "active",
+                    "Verified": "G1 accepted.",
+                    "Blockers": "none",
+                    "Decision": "unchanged",
+                    "Next": "Verify G2.",
+                    "Repository": "branch feat/example commit abc123",
+                },
+            )
+            note.write_text(active, encoding="utf-8")
+            env = {**os.environ, "CTX_ARM_STATE_DIR": state_dir}
+
+            # Arm the record first, as a prior activate/assert-active would.
+            armed = self.guard(
+                vault,
+                "source-mutation",
+                {
+                    "path": str(path),
+                    "expected_revision": "r4",
+                    "gate": "G2",
+                    "repository": "claude-code-pre-tool-use",
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(armed.returncode, 0, armed.stderr)
+            self.assertIsNotNone(arming_record(repo, Path(state_dir)))
+
+            passed = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r4",
+                    "gate": "G2",
+                    "transition": "pass",
+                    "verified": "Product owner accepted G2.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Assert merge readiness.",
+                    "repository": "branch feat/example commit abc123",
+                    "occurred_at": "2026-08-31T11:00:00Z",
+                    "verification": {
+                        "kind": "human",
+                        "identity": "product owner",
+                        "status": "accepted",
+                    },
+                },
+                cwd=repo,
+                env=env,
+            )
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertEqual(json.loads(passed.stdout)["lifecycle_status"], "complete")
+
+            # A completed PRD can never reactivate a gate, so leaving the
+            # record armed would permanently block bash/edit tools in this
+            # repository; unlike record-merge, this must clear it.
+            self.assertIsNone(arming_record(repo, Path(state_dir)))
+
 
 if __name__ == "__main__":
     unittest.main()

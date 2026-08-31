@@ -89,7 +89,7 @@ Both workflows share the same contract:
 - The user’s original verb determines whether implementation is authorized.
 - PRD lifecycle writes run through the packaged state machine and are structurally validated, revision-checked, atomically replaced, and re-read before execution, advancement, merge, yield, or completion claims.
 
-OMP exposes the state machine as the essential `ctx_prd_lifecycle` tool. Its extension arms a source-mutation guard when `skill://ctx-prd` is read and blocks session settlement while the repository fingerprint differs from `Current checkpoint`. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root, or pass `vaultRoot` to the tool. Claude Code and Codex distributions include the same `scripts/prd_checkpoint.py` command.
+OMP exposes the state machine as the essential `ctx_prd_lifecycle` tool. Its extension arms a source-mutation guard when `skill://ctx-prd` is read and blocks session settlement while the repository fingerprint differs from `Current checkpoint`. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root, or pass `vaultRoot` to the tool. Claude Code and Codex distributions include the same `scripts/prd_checkpoint.py` command and package `PreToolUse`/`Stop` hooks that arm the same guards deterministically once a gate has been attested in the repository.
 
 ## Install
 
@@ -108,6 +108,8 @@ claude plugin install ctx@ctx-core --scope user
 codex plugin marketplace add Garabed96/ctx-core --ref main
 codex plugin add ctx@ctx-core
 ```
+
+Open `/hooks`, review the CTX hooks, and trust them; Codex does not auto-trust plugin hooks.
 
 ### OMP
 
