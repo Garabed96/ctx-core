@@ -14,6 +14,6 @@ For each case return its `id` and one `actual` object with exactly these fields:
 - `mode`: `interview`, `artifact`, `gate`, `checkpoint`, `implementation`, `debugging`, `testing`, `review`, or `focused-qa`
 - `worktree`: `explicit` only when the prompt itself authorizes creation; otherwise `not-authorized`
 
-Use product ambiguity—not code size—to distinguish PRD from Lean. Entering PRD for unresolved product ambiguity creates or updates its canonical PRD even when implementation is not authorized. An explicit “design and build” request is `execute-after-approval`, not `artifact-only`. Explicit TDD is `testing`, not ordinary implementation. A standalone QA request is Lean with `focused-qa`; a durable QA campaign for an active PRD gate is PRD with `gate`. Never infer worktree authorization from task scope.
+Use product ambiguity—not code size—to distinguish PRD from Lean. Entering PRD for unresolved product ambiguity creates or updates its canonical PRD even when implementation is not authorized. An explicit “design and build” request is `execute-after-approval`, not `artifact-only`. Explicit TDD is `testing`, not ordinary implementation. A settled, already-diagnosed or approved fix is `implementation`; `debugging` requires undiagnosed behavior whose cause must still be found. A standalone QA request is Lean with `focused-qa`; a durable QA campaign for an active PRD gate is PRD with `gate`. Never infer worktree authorization from task scope.
 
 Return JSON only. Do not include rationale or fields outside the contract.
