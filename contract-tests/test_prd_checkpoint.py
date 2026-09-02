@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+import io
 import json
 import os
 import re
@@ -10,11 +12,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 COMMAND = REPO / "core" / "scripts" / "prd_checkpoint.py"
+STOP_HOOK = REPO / "adapters" / "claude-code" / "hooks" / "stop.py"
 
 sys.path.insert(0, str(COMMAND.parent))
 import prd_arming  # noqa: E402 - path must be extended first
@@ -1314,6 +1318,31 @@ class ArmingStateTest(unittest.TestCase):
             # record armed would permanently block bash/edit tools in this
             # repository; unlike record-merge, this must clear it.
             self.assertIsNone(arming_record(repo, Path(state_dir)))
+
+
+class ClaudeCodeStopHookTest(unittest.TestCase):
+    def test_active_stop_hook_reentry_does_not_block_again(self) -> None:
+        spec = importlib.util.spec_from_file_location("ctx_core_stop_hook", STOP_HOOK)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        arming = mock.Mock()
+        fingerprint = mock.Mock()
+        with mock.patch.dict(
+            sys.modules,
+            {"prd_arming": arming, "repo_fingerprint": fingerprint},
+        ), mock.patch.object(
+            sys,
+            "stdin",
+            io.StringIO(json.dumps({"cwd": "/repo", "stop_hook_active": True})),
+        ), mock.patch.object(module.subprocess, "run") as run:
+            self.assertEqual(module.main(), 0)
+
+        arming.read.assert_not_called()
+        fingerprint.fingerprint.assert_not_called()
+        run.assert_not_called()
 
 
 if __name__ == "__main__":
