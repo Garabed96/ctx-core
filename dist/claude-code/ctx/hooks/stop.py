@@ -43,6 +43,9 @@ def main() -> int:
     except Exception as error:  # noqa: BLE001
         return _fail_open(f"could not read hook input: {error}")
 
+    if isinstance(payload, dict) and payload.get("stop_hook_active"):
+        return 0  # Claude Code re-entry after a block; blocking again creates an infinite loop
+
     cwd = payload.get("cwd") if isinstance(payload, dict) else None
     if not cwd:
         return _fail_open("hook input is missing cwd")
