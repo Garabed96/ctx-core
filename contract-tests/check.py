@@ -229,6 +229,11 @@ def validate_composition(repo: Path) -> None:
             manifest = json.loads((first / manifest_dir / "plugin.json").read_text())
             require(manifest["name"] == "ctx", f"{runtime} plugin name drifted")
             require(bool(manifest.get("version")), f"{runtime} plugin version is missing")
+            if runtime != "codex":
+                require(
+                    entries[0].get("version") == manifest["version"],
+                    f"{runtime} catalog version drifted",
+                )
 
             checkpoint_command = first / "scripts" / "prd_checkpoint.py"
             require(

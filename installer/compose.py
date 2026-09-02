@@ -93,8 +93,16 @@ def compose(runtime: str, output: Path | None) -> Path:
             continue
         destination = target / asset.name
         if asset.is_dir():
-            shutil.copytree(asset, destination)
-            source_paths.extend(path for path in asset.rglob("*") if path.is_file())
+            shutil.copytree(
+                asset,
+                destination,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+            source_paths.extend(
+                path
+                for path in asset.rglob("*")
+                if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+            )
         else:
             shutil.copy2(asset, destination)
             source_paths.append(asset)
