@@ -11,7 +11,7 @@
       "name": "ctx",
       "source": "./dist/claude-code/ctx",
       "description": "Two deep workflows for durable product decisions and lean technical execution.",
-      "version": "0.3.2"
+      "version": "0.3.3"
     }
   ]
 }

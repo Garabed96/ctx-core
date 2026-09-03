@@ -6,9 +6,9 @@
       "./extensions/prd-lifecycle.ts"
     ],
     "name": "CTX Core",
-    "version": "0.3.2"
+    "version": "0.3.3"
   },
   "private": true,
   "type": "module",
-  "version": "0.3.2"
+  "version": "0.3.3"
 }
