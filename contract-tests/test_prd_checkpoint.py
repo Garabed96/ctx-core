@@ -185,10 +185,11 @@ class CheckpointCommandTest(unittest.TestCase):
         *,
         cwd: Path | None = None,
         env: dict[str, str] | None = None,
+        extra_args: list[str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         self.ensure_plans(vault)
         return subprocess.run(
-            [sys.executable, str(COMMAND), "--vault-root", str(vault)],
+            [sys.executable, str(COMMAND), "--vault-root", str(vault), *(extra_args or [])],
             input=json.dumps(request),
             capture_output=True,
             text=True,
@@ -1024,6 +1025,54 @@ class ArmingStateTest(unittest.TestCase):
     invoke = CheckpointCommandTest.invoke
     guard = CheckpointCommandTest.guard
 
+    def test_session_id_flag_is_recorded(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, \
+                tempfile.TemporaryDirectory() as repo_dir, \
+                tempfile.TemporaryDirectory() as state_dir:
+            vault = Path(temporary)
+            repo = Path(repo_dir)
+            path = Path("Example Initiative/PRD/example.md")
+            note = vault / path
+            note.parent.mkdir(parents=True)
+            note.write_text(PRD, encoding="utf-8")
+            env = {**os.environ, "CTX_ARM_STATE_DIR": state_dir, "CLAUDE_CODE_SESSION_ID": "env-session"}
+
+            activated = self.invoke(
+                vault,
+                {
+                    "path": str(path),
+                    "expected_revision": "r1",
+                    "gate": "G1",
+                    "transition": "activate",
+                    "verified": "Approval recorded for Gate 1 execution.",
+                    "blockers": "none",
+                    "decision": "unchanged",
+                    "next_action": "Implement the G1 vertical slice.",
+                    "repository": "branch feat/example",
+                    "occurred_at": "2026-08-31T10:00:00Z",
+                },
+                cwd=repo,
+                env=env,
+                extra_args=["--session-id", "omp-session"],
+            )
+            self.assertEqual(activated.returncode, 0, activated.stderr)
+            record = arming_record(repo, Path(state_dir))
+            self.assertEqual(record["session_id"], "omp-session")
+
+            guarded = self.guard(
+                vault,
+                "source-mutation",
+                {"path": str(path), "expected_revision": "r2", "gate": "G1", "repository": "x"},
+                cwd=repo,
+                env={**env, "CLAUDE_CODE_SESSION_ID": "chat-session"},
+            )
+            self.assertEqual(guarded.returncode, 0, guarded.stderr)
+            self.assertEqual(arming_record(repo, Path(state_dir))["session_id"], "omp-session")
+            self.assertTrue(prd_arming.foreign_session(record, "other"))
+            self.assertFalse(prd_arming.foreign_session(record, "omp-session"))
+            self.assertFalse(prd_arming.foreign_session(record, None))
+            self.assertFalse(prd_arming.foreign_session({"gate": "G1"}, "other"))
+
     def test_activate_arms_and_pause_disarms(self) -> None:
         with tempfile.TemporaryDirectory() as temporary, \
                 tempfile.TemporaryDirectory() as repo_dir, \
@@ -1321,6 +1370,26 @@ class ArmingStateTest(unittest.TestCase):
 
 
 class ClaudeCodeStopHookTest(unittest.TestCase):
+    def test_record_armed_by_another_session_passes_through(self) -> None:
+        spec = importlib.util.spec_from_file_location("ctx_core_stop_hook_foreign", STOP_HOOK)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        fingerprint = mock.Mock()
+        with mock.patch.dict(sys.modules, {"repo_fingerprint": fingerprint}), mock.patch.object(
+            sys,
+            "stdin",
+            io.StringIO(json.dumps({"cwd": "/repo", "session_id": "chat-session"})),
+        ), mock.patch.object(
+            prd_arming,
+            "read",
+            return_value={"vault_root": "/v", "path": "p.md", "gate": "G1", "expected_revision": "r2", "session_id": "executor"},
+        ), mock.patch.dict(sys.modules, {"prd_arming": prd_arming}), mock.patch.object(module.subprocess, "run") as run:
+            self.assertEqual(module.main(), 0)
+
+        fingerprint.fingerprint.assert_not_called()
+        run.assert_not_called()
+
     def test_active_stop_hook_reentry_does_not_block_again(self) -> None:
         spec = importlib.util.spec_from_file_location("ctx_core_stop_hook", STOP_HOOK)
         self.assertIsNotNone(spec)

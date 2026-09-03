@@ -72,8 +72,16 @@ def arm(
     path: str,
     gate: str,
     revision: str,
+    session_id: str | None = None,
 ) -> None:
-    """Persist (or refresh) the arming record for one repository."""
+    """Persist (or refresh) the arming record for one repository.
+
+    ``session_id`` names the agent session that attested the gate. Hooks in
+    a different session (a second chat window in the same repository, or a
+    Claude Code session beside the OMP executor) compare it via
+    ``foreign_session`` and stay out of the way; a record without one keeps
+    the older repository-wide behaviour.
+    """
     directory = state_dir()
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     record = {
@@ -84,6 +92,8 @@ def arm(
         "gate": gate,
         "expected_revision": revision,
     }
+    if session_id:
+        record["session_id"] = session_id
     target = _record_path(repository_root, directory)
     descriptor, temporary_name = tempfile.mkstemp(dir=directory, prefix=".arming-", suffix=".json")
     try:
@@ -105,6 +115,16 @@ def disarm(repository_root: Path) -> None:
         _record_path(repository_root).unlink()
     except FileNotFoundError:
         pass
+
+
+def foreign_session(record: dict[str, Any], session_id: Any) -> bool:
+    """True when ``record`` was armed by a different, known session.
+
+    Both ids must be present and non-empty to say "foreign"; a record or a
+    hook payload without one falls back to repository-wide arming.
+    """
+    armed = record.get("session_id")
+    return bool(armed) and isinstance(session_id, str) and bool(session_id) and armed != session_id
 
 
 def read(repository_root: Path) -> dict[str, Any] | None:

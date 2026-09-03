@@ -53,6 +53,9 @@ def main() -> int:
     if record is None:
         return 0  # unarmed: no PRD gate has been attested for this repository
 
+    if prd_arming.foreign_session(record, payload.get("session_id")):
+        return 0  # armed by another agent session; its own hooks enforce the guard
+
     checkpoint = SCRIPTS_ROOT / "prd_checkpoint.py"
     if not checkpoint.is_file():
         return _fail_open("packaged prd_checkpoint.py is missing")

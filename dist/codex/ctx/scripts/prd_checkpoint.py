@@ -1261,7 +1261,7 @@ def _atomic_guard(
 DISARMING_TRANSITIONS = {"pause"}
 
 
-def _record_arming(vault_root: Path, result: dict[str, str]) -> None:
+def _record_arming(vault_root: Path, result: dict[str, str], session_id: str | None = None) -> None:
     """Refresh the on-disk arming record after a successful call.
 
     See ``prd_arming`` for why a hook-driven Claude Code runtime needs this
@@ -1275,12 +1275,15 @@ def _record_arming(vault_root: Path, result: dict[str, str]) -> None:
             path=result["path"],
             gate=result["current_gate"],
             revision=result["revision"],
+            session_id=session_id,
         )
     except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
         print(f"warning: prd_checkpoint arming update failed: {error}", file=sys.stderr)
 
 
-def _settle_arming(vault_root: Path, transition: str, result: dict[str, str]) -> None:
+def _settle_arming(
+    vault_root: Path, transition: str, result: dict[str, str], session_id: str | None = None
+) -> None:
     """Refresh or clear the on-disk arming record after a successful transition.
 
     Cleared after ``pause`` and after a ``pass`` that completes every gate.
@@ -1312,12 +1315,24 @@ def _settle_arming(vault_root: Path, transition: str, result: dict[str, str]) ->
         except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
             print(f"warning: prd_checkpoint arming clear failed: {error}", file=sys.stderr)
         return
-    _record_arming(vault_root, result)
+    _record_arming(vault_root, result, session_id)
+
+
+def _guard_session_id(explicit: str | None) -> str | None:
+    """Guards are read-only checks: keep the record's current owner unless the caller names one."""
+    if explicit:
+        return explicit
+    record = prd_arming.read(Path.cwd())
+    return record.get("session_id") if record else None
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault-root", required=True, type=Path)
+    parser.add_argument(
+        "--session-id",
+        help="Agent session that owns this arming; transitions default to $CLAUDE_CODE_SESSION_ID.",
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "--guard",
@@ -1338,7 +1353,7 @@ def main() -> int:
                 GuardRequest.from_json(value),
                 args.guard,
             )
-            _record_arming(args.vault_root, result)
+            _record_arming(args.vault_root, result, _guard_session_id(args.session_id))
         elif args.validate:
             result = _atomic_validate(args.vault_root, _validation_path(value))
         elif args.migrate:
@@ -1351,7 +1366,12 @@ def main() -> int:
             )
         else:
             result = _atomic_transition(args.vault_root, Request.from_json(value))
-            _settle_arming(args.vault_root, result["transition"], result)
+            _settle_arming(
+                args.vault_root,
+                result["transition"],
+                result,
+                args.session_id or os.environ.get("CLAUDE_CODE_SESSION_ID") or None,
+            )
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         failure = {"code": "invalid_request", "message": str(error)}
         print(json.dumps(failure, sort_keys=True), file=sys.stderr)

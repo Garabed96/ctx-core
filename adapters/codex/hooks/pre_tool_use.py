@@ -29,6 +29,8 @@ def main() -> int:
                 return fail_open("arming state is unreadable or malformed")
             return 0
         armed_repository = Path(record["repository_root"])
+        if prd_arming.foreign_session(record, payload.get("session_id")):
+            return 0
         if armed_repository.resolve() != repository.resolve():
             return fail_open("arming state belongs to a different repository")
 

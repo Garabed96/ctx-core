@@ -103,9 +103,11 @@ async function invokeCheckpoint(
   request: Record<string, unknown>,
   guard: string | undefined,
   signal?: AbortSignal,
+  sessionId?: string,
 ): Promise<{ ok: true; result: CommandResult } | { ok: false; error: CommandResult }> {
   const args = [command, "--vault-root", vaultRoot];
   if (guard) args.push("--guard", guard);
+  if (sessionId) args.push("--session-id", sessionId);
   const completed = await runProcess(
     process.env.CTX_PYTHON ?? "python3",
     args,
@@ -253,11 +255,11 @@ export default function prdLifecycle(pi: ExtensionAPI) {
             merge_assertion: params.mergeAssertion,
             amendment: params.amendment,
           };
-      const invoked = await invokeCheckpoint(vaultRoot, request, guard, signal);
+      const sessionId = ctx.sessionManager.getSessionId();
+      const invoked = await invokeCheckpoint(vaultRoot, request, guard, signal, sessionId);
       if (!invoked.ok) return output({ ok: false, ...invoked.error });
 
       const result = invoked.result;
-      const sessionId = ctx.sessionManager.getSessionId();
       bindings.set(sessionId, {
         gate: String(result.current_gate),
         path: String(result.path),
@@ -297,6 +299,8 @@ export default function prdLifecycle(pi: ExtensionAPI) {
         repository,
       },
       "source-mutation",
+      undefined,
+      sessionId,
     );
     if (!guarded.ok) {
       return {
@@ -307,7 +311,8 @@ export default function prdLifecycle(pi: ExtensionAPI) {
   });
 
   runtime.on("session_stop", async (_event: any, ctx: any) => {
-    const binding = bindings.get(ctx.sessionManager.getSessionId());
+    const sessionId = ctx.sessionManager.getSessionId();
+    const binding = bindings.get(sessionId);
     if (!binding) return;
     const repository = await repositoryFingerprint(binding.repositoryRoot).catch(() => "");
     const guarded = await invokeCheckpoint(
@@ -319,6 +324,8 @@ export default function prdLifecycle(pi: ExtensionAPI) {
         repository,
       },
       "yield",
+      undefined,
+      sessionId,
     );
     if (!guarded.ok) {
       return {
