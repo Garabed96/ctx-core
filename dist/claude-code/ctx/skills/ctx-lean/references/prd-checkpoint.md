@@ -37,23 +37,17 @@ attestation
 ```
 `assert-merge` also returns `merge_assertion`; `record-merge` must present that token against the same revision.
 
-## Deterministic invocation
+## Judgment and deterministic checks
 
-Lifecycle events, not free-form model judgment, select transitions:
+The agent judges product relevance from the requested scope, actual changes, tests, and UI evidence. The checkpoint command validates the resulting state transition and persists it; it does not establish that the evidence is true or authenticate a human's acceptance.
 
-| Event source | Event | Engine action |
-|---|---|---|
-| Gate controller | approved pending gate begins | `activate` |
-| Source-mutation guard | repository edit requested | read-only `source-mutation` guard, equivalent to `assert-active` |
-| Verifier runner or explicit human acceptance | named verifier accepts or rejects | `pass` or `fail` |
-| Workflow controller | blocker, resolution, retry, or parking | `block`, `resume`, `retry`, or `pause` |
-| Session stop guard | main turn attempts to yield | compare the current repository fingerprint with `Current checkpoint` while work is nonterminal; accept a structurally valid complete PRD |
-| Merge controller | merge begins or completes | `assert-merge` or `record-merge` |
+Every invocation explicitly names the PRD, gate, and revision. There is no repository-wide owner, session registry, model identity, tool interception, or stop hook. Concurrent callers of the same PRD must reread after a revision conflict; callers of different PRDs do not share lifecycle state.
 
-OMP exposes these events through `ctx_prd_lifecycle`. Reading `ctx-prd` arms the source-mutation guard; every bash call and repository-write tool remains blocked until `gate.activate` or `gate.assert-active` returns an attestation. A stale repository fingerprint blocks nonterminal session settlement until a write transition refreshes the canonical checkpoint. A complete PRD has no writable active gate, so validated terminal yield and completion do not compare the obsolete active-work fingerprint.
+Use `activate` or `assert-active` before a PRD-owned implementation slice, the appropriate write transition after material progress or before handoff, and `assert-merge` before merging. OMP exposes these transitions through `ctx_prd_lifecycle`; Claude Code and Codex invoke the packaged Python command.
 
+A fingerprint identifies the repository snapshot, not the author or the functional meaning of a change. A mismatch requires investigation before reusing evidence; it never blocks inspection, recovery, or ending a read-only conversation. Do not refresh a fingerprint and repeat old success claims without checking whether the changed code invalidates them. At merge, `assert-merge` conservatively requires an exact match with the passed checkpoint.
 
-The revision format remains local to the PRD. The adapter advances it consistently with the existing note and returns the exact new value. Assertions do not advance the revision.
+The revision format remains local to the PRD. Write transitions advance it once; assertions do not advance it.
 
 ## Transition contract
 
@@ -81,13 +75,13 @@ For every call:
 1. Read the exact canonical PRD and resolve its revision, lifecycle status, current gate, named verifier, gate status, and linked plan.
 2. Structurally validate the PRD section order, gate field order, Feature lists, plan paths/backlinks, plan section order, and parallel ownership contract.
 3. Compare `expected_revision` before any write. On mismatch, return the current revision and make no change.
-4. Validate authorization, transition, verifier evidence, blockers, gate order, and repository claims.
+4. Validate recorded approval, legal transition, named verifier fields, blockers, gate order, and applicable repository assertions.
 5. Construct the complete updated note in memory, touching only frontmatter lifecycle fields, the owning gate's status/evidence, the seven state-machine-owned `Current checkpoint` fields, and one approved amendment. Preserve additional accepted checkpoint context.
 6. Advance the revision exactly once for a write transition.
 7. Atomically replace the note while holding its checkpoint lock.
 8. Re-read and structurally validate the PRD, linked plans, returned fields, and content hash. A partial or unverifiable write fails closed.
 
-No source mutation, gate advancement, merge, completion claim, or nonterminal yield may cross this seam while its required checkpoint is missing or stale. A terminal yield still requires a structurally valid complete PRD with every gate passed.
+A failed checkpoint is an unsaved or unverified result. Report it and recover before advancing the gate, merging, or claiming completion. Reads and recovery remain available. Saving progress is an explicit agent obligation, not automatic synchronization from Git.
 
 ## Current checkpoint
 

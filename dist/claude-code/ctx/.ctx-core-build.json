@@ -4,6 +4,6 @@
     "ctx-prd",
     "ctx-lean"
   ],
-  "source_sha256": "40add3d4baab76dbf06a6fe34f813b4df482ec80eac9a068ceb13795baae7a52",
-  "version": "0.3.3"
+  "source_sha256": "c8cc63dd6ea24fe42ca44128faca805119bd027286bf47455241631ac77b9095",
+  "version": "0.4.0"
 }

@@ -146,7 +146,7 @@ An explicit chat approval or checked approval box is sufficient. On approval:
 - set `approved_by`, `approved_at`, and `status: approved`;
 - activate only the first eligible gate unless the approval explicitly says otherwise.
 
-`PrdCheckpoint` validates the complete PRD and all plans before every transition or guard. Activation additionally requires the target plan to exist, link back, match its deterministic path, and satisfy its section and ownership contracts. Preceding gates must be passed and no other gate may be active.
+`PrdCheckpoint` validates the complete PRD and all plans before every transition or assertion. Activation additionally requires the target plan to exist, link back, match its deterministic path, and satisfy its section and ownership contracts. Preceding gates must be passed and no other gate may be active.
 
 The PRD owns product scope, decisions, gate state, and evidence. Plans own implementation detail. Amendments replace current accepted text and append one dated rationale without rewriting historical amendment entries.
 
@@ -191,4 +191,4 @@ Migration never leaves two canonical shapes, compatibility aliases, placeholder 
 
 Canvas is presentation only. Markdown remains canonical and Canvas never owns lifecycle state.
 
-Mark `status: complete` only when every gate is passed by its named verifier and all plan and evidence links resolve. In a validated terminal state, yield and completion guards accept repository evolution because the active-work fingerprint is no longer writable; merge truth remains protected by `assert-merge` and `record-merge`.
+Mark `status: complete` only when every gate is passed by its named verifier and all plan and evidence links resolve. Later repository changes do not block a read-only conversation or rewrite completed history. Reassess affected claims before reusing their evidence; merge assertions still require the recorded snapshot through `assert-merge` and `record-merge`.

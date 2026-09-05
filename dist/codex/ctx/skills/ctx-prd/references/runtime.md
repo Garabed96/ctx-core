@@ -14,11 +14,11 @@ Resolve the vault and PRD root from explicit user/project context or an existing
 
 ## `PrdCheckpoint`
 
-Read `references/prd-checkpoint.md`. Resolve the canonical local vault root and the runtime-provided absolute installed plugin root, then invoke Python with `<plugin-root>/scripts/prd_checkpoint.py --vault-root <root>` and one JSON transition request—including current `blockers` or `none`—on stdin. Use its `--guard source-mutation` before PRD-owned repository edits and `--guard yield` before settlement. Use `--validate` for read-only structural validation and `--migrate` for revision-safe v0.3.1 migration. Never patch PRD lifecycle fields through the Obsidian connector.
+Read `references/prd-checkpoint.md`. Resolve the canonical local vault root and the absolute installed plugin root, then invoke Python with `<plugin-root>/scripts/prd_checkpoint.py --vault-root <root>` and one JSON transition request on stdin. Name the exact PRD `path`, `gate`, `expected_revision`, observed evidence, blockers, decision, next action, and timestamp. Fill `repository` with the output of `<plugin-root>/scripts/repo_fingerprint.py <repository-root>`; `record-merge` records the PR and merge commit pointer instead.
 
-The command validates the exact PRD hierarchy and all linked plans, holds a per-note lock, checks `expected_revision` and the legal transition, atomically replaces the complete PRD, then re-reads and returns a content-hash attestation. Invalid structure, missing plans, revision drift, illegal transitions, stale repository state, partial writes, or failed re-reads stop source mutation, merge, advancement, or yield.
+Use `activate` or `assert-active` before a PRD-owned implementation slice. Write material progress before unrelated work or handoff; use `assert-merge` and `record-merge` around a merge. Use `--validate` for read-only structure checks and `--migrate` for revision-safe legacy migration. Never patch lifecycle fields through the Obsidian connector.
 
-Packaged `PreToolUse` and `Stop` hooks enforce the source-mutation and nonterminal-yield seams once a repository is armed by a successful checkpoint call. A structurally valid complete PRD may settle. Hooks fail open with a warning on wrapper faults and remain guardrails rather than a complete enforcement boundary; keep the prose instructions above as the backstop.
+The command validates the PRD and linked plans, locks the note, checks its expected revision and legal transition, atomically replaces it, then re-reads a content-hash attestation. Reconcile a refused checkpoint before advancing or claiming success. There are no tool or stop hooks: reads, unrelated sessions, and recovery remain available. The agent must invoke checkpoints; a repository fingerprint cannot judge product relevance or verify evidence.
 
 ## `InspectSurface`
 

@@ -49,13 +49,13 @@ Partial evidence supports only a partial claim. Evidence becomes stale after a r
 
 PRD-owned execution crosses one lifecycle seam: the packaged `PrdCheckpoint` state machine in `references/prd-checkpoint.md`. Read the canonical revision and current gate's linked plan before mutation; callers never patch lifecycle fields or gate evidence directly.
 
-- Source mutation requires an attested active gate at the expected revision. Attestation first validates the canonical PRD shape, deterministic plan path, backlink, plan structure, and numeric gate order. OMP fails closed on every bash call and repository-write tool through its `tool_call` guard; Claude Code fails closed the same way through its packaged `PreToolUse` hook once a gate has been attested in the repository.
-- The repository fingerprint in `Current checkpoint` must match before nonterminal yield, next-gate work, or merge. OMP's `session_stop` guard, and Claude Code's packaged `Stop` hook, continue the turn when active work is stale; a structurally valid complete PRD may settle because no active gate can refresh that fingerprint.
+- Before a PRD-owned implementation slice, use `activate` or `assert-active` at the expected revision. These calls validate the PRD, linked plans, approval, and gate order. They do not intercept tools or bind a session to a repository.
+- A repository fingerprint records the snapshot supporting evidence. Another agent's changes may invalidate that evidence but cannot establish who changed the product or block reads. Inspect the changes and reverify affected claims before recording new truth; never update the fingerprint just to conceal stale evidence.
 - Material blocker, resolution, evidence, verifier, pause, retry, and failure changes require a write checkpoint before unrelated work or yield. A change is material when the recorded checkpoint truth is no longer accurate: a verifier result, a new or resolved blocker, a changed decision, or evidence that alters the Verified line. Intermediate edits within the current slice, refactors that change no recorded truth, and re-runs of already-recorded evidence are not.
 - A failed gate returns to active only through `retry` with remediation evidence.
 - A merge requires `assert-merge` against a passed gate and matching repository evidence.
 - A completed merge requires `record-merge` with the same-revision assertion before the branch or gate is called closed.
-- Revision drift, an illegal transition, a partial write, or an unavailable canonical store fails closed.
+- Revision drift, an illegal transition, a partial write, or an unavailable canonical store refuses the checkpoint. Keep inspection and recovery available; do not advance or claim the result was saved.
 
 Standalone Lean work has no PRD checkpoint or merge barrier.
 

@@ -131,7 +131,6 @@ def compose(runtime: str, output: Path | None) -> Path:
     if runtime in {"codex", "omp"}:
         manifest["skills"] = "./skills/"
     if runtime == "codex":
-        manifest["hooks"] = "./hooks/hooks.json"
         manifest["license"] = metadata["license"]
         manifest["interface"] = {
             "displayName": "CTX Core",

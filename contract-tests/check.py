@@ -76,7 +76,10 @@ def frontmatter(markdown: str) -> dict[str, str]:
 
 def tree_digest(root: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    for path in sorted(
+        item for item in root.rglob("*")
+        if item.is_file() and "__pycache__" not in item.parts and item.suffix != ".pyc"
+    ):
         digest.update(path.relative_to(root).as_posix().encode())
         digest.update(b"\0")
         digest.update(path.read_bytes())
@@ -103,103 +106,6 @@ def compose(repo: Path, runtime: str, target: Path) -> None:
         Path(completed.stdout.strip()).resolve() == target.resolve(),
         "composer reported the wrong target",
     )
-
-
-def validate_claude_code_hooks(target: Path) -> None:
-    """Structurally validate the composed claude-code hooks configuration.
-
-    Checks hooks.json parses, declares the PreToolUse/Stop enforcement, and
-    that every referenced ``${CLAUDE_PLUGIN_ROOT}``-relative command exists
-    and is executable in the composed distribution, alongside the shared
-    checkpoint modules those commands import.
-    """
-    hooks_config_path = target / "hooks" / "hooks.json"
-    require(hooks_config_path.is_file(), "claude-code hooks.json is missing")
-    try:
-        config = json.loads(hooks_config_path.read_text())
-    except json.JSONDecodeError as error:
-        raise AssertionError(f"claude-code hooks.json does not parse: {error}") from error
-
-    events = config.get("hooks")
-    require(isinstance(events, dict), "claude-code hooks.json is missing a hooks object")
-    require("PreToolUse" in events, "claude-code hooks.json omits PreToolUse")
-    require("Stop" in events, "claude-code hooks.json omits Stop")
-
-    matchers = {
-        entry.get("matcher")
-        for entry in events.get("PreToolUse", [])
-        if isinstance(entry, dict)
-    }
-    require(
-        "Edit|Write|MultiEdit|NotebookEdit|Bash" in matchers,
-        "claude-code PreToolUse hook does not match Edit|Write|MultiEdit|NotebookEdit|Bash",
-    )
-
-    commands: list[str] = []
-    for event_entries in events.values():
-        require(isinstance(event_entries, list), "claude-code hooks.json event entries must be a list")
-        for entry in event_entries:
-            require(isinstance(entry, dict), "claude-code hooks.json entry must be an object")
-            for hook in entry.get("hooks", []):
-                require(
-                    isinstance(hook, dict) and hook.get("type") == "command",
-                    "claude-code hook entries must be type command",
-                )
-                command = hook.get("command")
-                require(isinstance(command, str) and bool(command), "claude-code hook is missing a command")
-                commands.append(command)
-
-    require(bool(commands), "claude-code hooks.json declares no commands")
-    for command in commands:
-        require(
-            command.startswith("${CLAUDE_PLUGIN_ROOT}/"),
-            f"claude-code hook command does not use ${{CLAUDE_PLUGIN_ROOT}}: {command}",
-        )
-        relative = command[len("${CLAUDE_PLUGIN_ROOT}/") :]
-        script = target / relative
-        require(script.is_file(), f"claude-code hook script is missing: {relative}")
-        require(
-            script.stat().st_mode & 0o111 != 0,
-            f"claude-code hook script is not executable: {relative}",
-        )
-
-    for module in ("prd_arming.py", "repo_fingerprint.py"):
-        module_path = target / "scripts" / module
-        require(module_path.is_file(), f"claude-code checkpoint module is missing: {module}")
-
-
-def validate_codex_hooks(target: Path, manifest: dict) -> None:
-    require(manifest.get("hooks") == "./hooks/hooks.json", "codex manifest omits hooks")
-    hooks_path = target / "hooks" / "hooks.json"
-    require(hooks_path.is_file(), "codex hooks.json is missing")
-    try:
-        events = json.loads(hooks_path.read_text()).get("hooks")
-    except json.JSONDecodeError as error:
-        raise AssertionError(f"codex hooks.json does not parse: {error}") from error
-    require(isinstance(events, dict), "codex hooks.json is missing a hooks object")
-    require("PreToolUse" in events and "Stop" in events, "codex hooks omit PreToolUse or Stop")
-    matchers = {
-        entry.get("matcher")
-        for entry in events["PreToolUse"]
-        if isinstance(entry, dict)
-    }
-    require(
-        "Bash|apply_patch|exec_command|write_stdin" in matchers,
-        "codex PreToolUse hook omits a repository-write tool",
-    )
-    for event, script_name in (("PreToolUse", "pre_tool_use.py"), ("Stop", "stop.py")):
-        commands = [
-            hook.get("command")
-            for entry in events[event]
-            if isinstance(entry, dict)
-            for hook in entry.get("hooks", [])
-            if isinstance(hook, dict) and hook.get("type") == "command"
-        ]
-        command = f"${{CLAUDE_PLUGIN_ROOT}}/hooks/{script_name}"
-        require(command in commands, f"codex {event} hook command drifted")
-        require((target / "hooks" / script_name).stat().st_mode & 0o111 != 0, f"codex hook is not executable: {script_name}")
-    for module in ("prd_arming.py", "repo_fingerprint.py"):
-        require((target / "scripts" / module).is_file(), f"codex checkpoint module is missing: {module}")
 
 
 def validate_composition(repo: Path) -> None:
@@ -268,10 +174,8 @@ def validate_composition(repo: Path) -> None:
                     == ["./extensions/prd-lifecycle.ts"],
                     "omp local package omits lifecycle extension",
                 )
-            if runtime == "claude-code":
-                validate_claude_code_hooks(first)
-            if runtime == "codex":
-                validate_codex_hooks(first, manifest)
+            require("hooks" not in manifest and not (first / "hooks").exists(), f"{runtime} must not intercept tools or turns")
+            require(not (first / "scripts" / "prd_arming.py").exists(), f"{runtime} must not persist session arming")
 
             skills_root = first / "skills"
             skills = {item.name for item in skills_root.iterdir() if item.is_dir()}
@@ -373,14 +277,7 @@ def validate_checkpoint_contract(repo: Path) -> None:
     omp_extension = (
         repo / "adapters" / "omp" / "extensions" / "prd-lifecycle.ts"
     ).read_text()
-    for contract in (
-        "ctx_prd_lifecycle",
-        'runtime.on("tool_call"',
-        'runtime.on("session_stop"',
-        '"source-mutation"',
-        '"yield"',
-    ):
-        require(contract in omp_extension, f"omp enforcement omits: {contract}")
+    require("ctx_prd_lifecycle" in omp_extension, "omp lifecycle tool is missing")
 
 def validate_checkpoint_behavior(repo: Path) -> None:
     commands = (

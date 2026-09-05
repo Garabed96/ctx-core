@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
-"""Print the deterministic git/worktree repository fingerprint for one path.
+"""Fingerprint HEAD, tracked changes and untracked files for checkpoint evidence.
 
-Mirrors OMP's ``repositoryFingerprint`` byte-for-byte: ``git:<HEAD>:worktree:
-<sha256 of the tracked diff against HEAD, followed by every untracked file's
-path and bytes in sorted order>``. Both sides of the ``PrdCheckpoint`` yield
-guard must agree exactly on this value for a given repository state:
-
-- the model runs this command to fill the ``repository`` field before every
-  transition that carries current execution truth (see
-  ``references/prd-checkpoint.md``);
-- the packaged Claude Code ``Stop`` hook calls ``fingerprint()`` directly to
-  compare the live repository against ``Current checkpoint`` before letting
-  the turn end.
-
-A prose-only, freeform fingerprint (a branch name, a loose description)
-cannot be verified this way, which is why the Claude Code adapter requires
-this exact command rather than leaving the format to model judgment.
+A mismatch invalidates the previous snapshot; it does not identify the author
+or determine whether a product claim changed. All runtime adapters use this
+command so their evidence uses the same bytes and ordering.
 """
 
 from __future__ import annotations
@@ -39,9 +27,7 @@ def _git(root: Path, *args: str) -> bytes:
 def fingerprint(root: Path) -> str:
     """Return the deterministic fingerprint for the repository at ``root``.
 
-    Raises on any git failure (not a repository, git unavailable, unreadable
-    file): callers that must fail open on infrastructure trouble should
-    catch broadly around this call rather than treat it as a guard refusal.
+    Raises on Git or file errors rather than returning unverifiable evidence.
     """
     root = Path(root).resolve()
     head = _git(root, "rev-parse", "HEAD").decode("utf-8", "strict").strip()

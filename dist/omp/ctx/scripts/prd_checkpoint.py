@@ -28,7 +28,6 @@ from prd_document import (
     section_span as document_section_span,
     validate_prd,
 )
-import prd_arming
 
 FRONTMATTER = re.compile(r"\A---\n(?P<body>.*?)\n---(?P<tail>\n|\Z)", re.DOTALL)
 REVISION = re.compile(r"r(?P<number>[1-9]\d*)\Z")
@@ -274,41 +273,6 @@ class Request:
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", request.gate):
             raise CheckpointError("invalid_request", "gate must be a stable identifier such as G1")
         _validate_timestamp(request.occurred_at)
-        return request
-
-
-@dataclass(frozen=True)
-class GuardRequest:
-    path: str
-    expected_revision: str
-    gate: str
-    repository: str
-
-    @classmethod
-    def from_json(cls, value: Any) -> "GuardRequest":
-        if not isinstance(value, dict):
-            raise CheckpointError("invalid_request", "guard request must be a JSON object")
-        required = ("path", "expected_revision", "gate", "repository")
-        _reject_unexpected_keys(value, set(required), "guard request")
-        missing = [
-            key
-            for key in required
-            if not isinstance(value.get(key), str) or not value[key].strip()
-        ]
-        if missing:
-            raise CheckpointError(
-                "invalid_request",
-                "guard request is missing: " + ", ".join(missing),
-            )
-        request = cls(**{key: value[key].strip() for key in required})
-        _require_single_line(
-            {key: getattr(request, key) for key in required},
-            "guard request",
-        )
-        if not REVISION.fullmatch(request.expected_revision):
-            raise CheckpointError("invalid_request", "expected_revision must match r<N>")
-        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", request.gate):
-            raise CheckpointError("invalid_request", "gate must be a stable identifier such as G1")
         return request
 
 
@@ -991,82 +955,6 @@ def transition_document(
     return updated, result
 
 
-def guard_document(
-    text: str,
-    request: GuardRequest,
-    action: str,
-    vault_root: Path,
-) -> dict[str, str]:
-    _validate_document(vault_root, request.path, text)
-    frontmatter = Frontmatter.parse(text)
-    revision = frontmatter.scalar("revision") or ""
-    if revision != request.expected_revision:
-        raise CheckpointError(
-            "revision_conflict",
-            f"expected {request.expected_revision}, found {revision}",
-            current_revision=revision,
-        )
-    if frontmatter.scalar("current_gate") != request.gate:
-        raise CheckpointError(
-            "guard_refused",
-            f"current gate is {frontmatter.scalar('current_gate') or 'null'}, not {request.gate}",
-        )
-    gate_start, gate_end = _gate_span(text, request.gate)
-    gate_status = _list_field(text[gate_start:gate_end], "Status")
-    lifecycle_status = frontmatter.scalar("status") or ""
-
-    if action == "source-mutation":
-        if lifecycle_status != "active" or gate_status != "active":
-            raise CheckpointError(
-                "guard_refused",
-                "source mutation requires an attested active gate",
-            )
-    else:
-        checkpoint = _checkpoint_fields(text)
-        if checkpoint["Gate"] != request.gate:
-            raise CheckpointError(
-                "stale_checkpoint",
-                "current checkpoint belongs to a different gate",
-            )
-        complete = (
-            lifecycle_status == "complete"
-            and gate_status == "passed"
-            and checkpoint["Status"] == "passed"
-            and all(status == "passed" for _, status in _gate_statuses(text))
-        )
-        if action == "completion":
-            if not complete:
-                raise CheckpointError(
-                    "guard_refused",
-                    "completion requires every gate to be passed",
-                )
-        elif action == "yield" and complete:
-            pass
-        else:
-            if checkpoint["Repository"] != request.repository:
-                raise CheckpointError(
-                    "stale_checkpoint",
-                    "repository fingerprint differs from the current checkpoint",
-                )
-            if action == "next-gate" and (
-                gate_status != "passed" or checkpoint["Status"] != "passed"
-            ):
-                raise CheckpointError(
-                    "guard_refused",
-                    "next-gate requires a passed current gate",
-                )
-
-    return {
-        "action": action,
-        "attestation": hashlib.sha256(text.encode("utf-8")).hexdigest(),
-        "current_gate": request.gate,
-        "gate_status": gate_status,
-        "lifecycle_status": lifecycle_status,
-        "path": request.path,
-        "revision": revision,
-    }
-
-
 def _resolve_note(vault_root: Path, relative_path: str) -> Path:
     if Path(relative_path).is_absolute():
         raise CheckpointError("invalid_request", "path must be relative to --vault-root")
@@ -1247,97 +1135,10 @@ def _lock_path(note: Path) -> Path:
     return lock_root / lock_name
 
 
-def _atomic_guard(
-    vault_root: Path,
-    request: GuardRequest,
-    action: str,
-) -> dict[str, str]:
-    note = _resolve_note(vault_root, request.path)
-    with _lock_path(note).open("a", encoding="utf-8") as lock:
-        fcntl.flock(lock, fcntl.LOCK_SH)
-        return guard_document(note.read_text(encoding="utf-8"), request, action, vault_root)
-
-
-DISARMING_TRANSITIONS = {"pause"}
-
-
-def _record_arming(vault_root: Path, result: dict[str, str], session_id: str | None = None) -> None:
-    """Refresh the on-disk arming record after a successful call.
-
-    See ``prd_arming`` for why a hook-driven Claude Code runtime needs this
-    where OMP holds an in-memory session binding instead. Best-effort: a
-    failure here must never fail the surrounding checkpoint command.
-    """
-    try:
-        prd_arming.arm(
-            Path.cwd(),
-            vault_root=vault_root,
-            path=result["path"],
-            gate=result["current_gate"],
-            revision=result["revision"],
-            session_id=session_id,
-        )
-    except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
-        print(f"warning: prd_checkpoint arming update failed: {error}", file=sys.stderr)
-
-
-def _settle_arming(
-    vault_root: Path, transition: str, result: dict[str, str], session_id: str | None = None
-) -> None:
-    """Refresh or clear the on-disk arming record after a successful transition.
-
-    Cleared after ``pause`` and after a ``pass`` that completes every gate.
-    Pausing exists to park work for an unknown, possibly cross-session
-    interval; leaving the record armed would let a later, unrelated turn in
-    the same repository trip the source-mutation guard for a PRD nobody is
-    resuming. A completed PRD can never reactivate a gate, so its record
-    would otherwise block that repository's bash/edit tools forever. OMP
-    has neither failure mode: its binding simply disappears with the
-    session, and both cases already fail closed there through PRD state
-    alone (lifecycle_status != "active").
-
-    ``record-merge`` deliberately stays armed even though it also leaves no
-    gate active: OMP's binding keeps refusing source-mutation for a
-    multi-gate PRD between one gate's ``record-merge`` and the next gate's
-    ``activate`` (gate_status stays "passed", not "active"), and clearing
-    the record here would silently under-enforce that same gap versus OMP.
-    Only ``activate`` (or another successful transition) re-arms it, which
-    naturally still happens moments later in the ordinary flow.
-
-    Best-effort: never raises.
-    """
-    settles = transition in DISARMING_TRANSITIONS or (
-        transition == "pass" and result.get("lifecycle_status") == "complete"
-    )
-    if settles:
-        try:
-            prd_arming.disarm(Path.cwd())
-        except Exception as error:  # noqa: BLE001 - arming is best-effort, never fatal
-            print(f"warning: prd_checkpoint arming clear failed: {error}", file=sys.stderr)
-        return
-    _record_arming(vault_root, result, session_id)
-
-
-def _guard_session_id(explicit: str | None) -> str | None:
-    """Guards are read-only checks: keep the record's current owner unless the caller names one."""
-    if explicit:
-        return explicit
-    record = prd_arming.read(Path.cwd())
-    return record.get("session_id") if record else None
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vault-root", required=True, type=Path)
-    parser.add_argument(
-        "--session-id",
-        help="Agent session that owns this arming; transitions default to $CLAUDE_CODE_SESSION_ID.",
-    )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
-        "--guard",
-        choices=("source-mutation", "yield", "next-gate", "completion"),
-    )
     mode.add_argument("--validate", action="store_true")
     mode.add_argument("--migrate", action="store_true")
     return parser.parse_args()
@@ -1347,14 +1148,7 @@ def main() -> int:
     args = parse_args()
     try:
         value = json.load(sys.stdin)
-        if args.guard:
-            result = _atomic_guard(
-                args.vault_root,
-                GuardRequest.from_json(value),
-                args.guard,
-            )
-            _record_arming(args.vault_root, result, _guard_session_id(args.session_id))
-        elif args.validate:
+        if args.validate:
             result = _atomic_validate(args.vault_root, _validation_path(value))
         elif args.migrate:
             path, revision, occurred_at = _migration_request(value)
@@ -1366,12 +1160,6 @@ def main() -> int:
             )
         else:
             result = _atomic_transition(args.vault_root, Request.from_json(value))
-            _settle_arming(
-                args.vault_root,
-                result["transition"],
-                result,
-                args.session_id or os.environ.get("CLAUDE_CODE_SESSION_ID") or None,
-            )
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         failure = {"code": "invalid_request", "message": str(error)}
         print(json.dumps(failure, sort_keys=True), file=sys.stderr)

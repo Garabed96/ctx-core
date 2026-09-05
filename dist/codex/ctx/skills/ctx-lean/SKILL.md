@@ -59,7 +59,7 @@ These are proportional references, not additional workflows.
 
 Before mutation, read `references/continuity-execution.md`, `references/runtime-interface.md`, and `references/runtime.md`. When a canonical PRD owns the work, also read `references/prd-checkpoint.md`.
 
-When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation; it fails closed, and a refused edit is reconciled before proceeding.
+When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation; a refused assertion is reconciled before implementation. Reads and checkpoint recovery remain available.
 
 Implement the current slice through the existing source-of-truth path. Follow the linked plan's ownership contract without turning it into runtime-specific orchestration: lanes name responsibilities, interfaces, and disjoint files, never a provider or model. When an independent UI lane applies, it uses the `impeccable` skill. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
 

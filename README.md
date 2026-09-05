@@ -66,7 +66,7 @@ Use it for:
 
 Lean holds Goal, Boundaries, Acceptance, and Current slice ephemerally. It creates no separate plan, checkpoint, QA sheet, or handoff.
 
-When an existing canonical PRD encompasses the work, Lean reads its revision and active gate before mutation, then uses `PrdCheckpoint` after material changes in execution truth. Parking, resume, and merge share the same fail-closed lifecycle seam; standalone Lean work remains ephemeral.
+When an existing canonical PRD encompasses the work, Lean reads its revision and active gate before mutation, then uses `PrdCheckpoint` after material changes in execution truth. Parking, resume, and merge use the same explicit lifecycle command; standalone Lean work remains ephemeral.
 
 Its proportional references cover:
 
@@ -89,7 +89,9 @@ Both workflows share the same contract:
 - The user’s original verb determines whether implementation is authorized.
 - PRD lifecycle writes run through the packaged state machine and are structurally validated, revision-checked, atomically replaced, and re-read before execution, advancement, merge, yield, or completion claims.
 
-OMP exposes the state machine as the essential `ctx_prd_lifecycle` tool. Its extension arms a source-mutation guard when `skill://ctx-prd` is read and blocks session settlement while the repository fingerprint differs from `Current checkpoint`. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root, or pass `vaultRoot` to the tool. Claude Code and Codex distributions include the same `scripts/prd_checkpoint.py` command and package `PreToolUse`/`Stop` hooks that arm the same guards deterministically once a gate has been attested in the repository.
+OMP exposes the state machine as the essential `ctx_prd_lifecycle` tool. Claude Code and Codex include the same `scripts/prd_checkpoint.py` command. Set `CTX_OBSIDIAN_VAULT` or pass `vaultRoot` in OMP; pass `--vault-root` to Python.
+
+Every call names its PRD, gate, and expected revision. There are no tool/stop hooks or session records. Revision checks protect concurrent updates to the same PRD; unrelated sessions cannot block each other. Agents explicitly save material progress and verify the returned attestation. Fingerprints identify the snapshot behind evidence; they cannot identify its author or prove that product scope and UI/UX goals match the code. That requires agent judgment, tests, and actual surface evidence.
 
 ## Install
 
@@ -108,8 +110,6 @@ claude plugin install ctx@ctx-core --scope user
 codex plugin marketplace add Garabed96/ctx-core --ref main
 codex plugin add ctx@ctx-core
 ```
-
-Open `/hooks`, review the CTX hooks, and trust them; Codex does not auto-trust plugin hooks.
 
 ### OMP
 
@@ -152,7 +152,13 @@ It explored broad development orchestration. `ctx-core` keeps the useful continu
 
 ## Status
 
-**v0.3.1 — Alpha**
+**v0.4.0 — Alpha**
+
+### v0.4.0
+
+- Removed automatic tool/turn blocking, session arming, and the redundant `--guard` / `guard.*` API. Use `activate` / `assert-active`, material write checkpoints, and `assert-merge` / `record-merge` instead. PRD format and existing notes are unchanged.
+- Shared one fingerprint implementation across runtimes. Composition checks ignore generated Python bytecode.
+- Previously installed plugins keep their old hooks until the updated package is installed and the runtime restarted.
 
 ### v0.3.1
 

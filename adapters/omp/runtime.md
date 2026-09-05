@@ -14,13 +14,13 @@ Resolve the vault and PRD root from explicit user/project context or an existing
 
 ## `PrdCheckpoint`
 
-Read `references/prd-checkpoint.md`. Invoke the essential `ctx_prd_lifecycle` tool for every lifecycle event. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root or pass `vaultRoot`; every transition passes the vault-relative PRD path, exact `expectedRevision` (mapped to `expected_revision`), and non-empty `verified`, `blockers`, `decision`, `nextAction`, and `occurredAt` fields. Guards require only the path, revision, gate, and repository fingerprint computed by the adapter. The adapter calls the packaged state machine and returns the re-read content-hash attestation.
+Read `references/prd-checkpoint.md`. Invoke the essential `ctx_prd_lifecycle` tool for every lifecycle event. Set `CTX_OBSIDIAN_VAULT` to the canonical local vault root or pass `vaultRoot`; every transition passes the vault-relative PRD path, exact `expectedRevision` (mapped to `expected_revision`), and non-empty `verified`, `blockers`, `decision`, `nextAction`, and `occurredAt` fields. The adapter obtains the repository fingerprint from the shared Python command, calls the packaged state machine, and returns the re-read content-hash attestation.
 
 Use `gate.activate` or `gate.assert-active` before PRD-owned source mutation; `verifier.accepted` or `verifier.rejected` for named verifier results; `gate.block`, `gate.resume`, `gate.retry`, `gate.update`, or `workflow.pause` for execution truth; and `merge.assert` followed by `merge.record` for merge truth. Never patch PRD lifecycle fields through Obsidian MCP.
 
 Resolve the absolute installed plugin root, then use `<plugin-root>/scripts/prd_checkpoint.py --validate` and `--migrate` for protocol maintenance. Validation is read-only; migration requires the exact revision and timestamp and performs one atomic PRD replacement.
 
-The extension arms a source-mutation guard only when the `skill://ctx-prd` resource is read. It fails closed on every bash call and repository-write tool without an active gate attestation and runs a repository-fingerprint guard before nonterminal session settlement. A structurally valid complete PRD may settle without matching the obsolete active-work fingerprint. Canonical-shape, missing-plan, stale-checkpoint, revision, transition, verifier, and attestation failures all fail closed.
+The extension only registers the lifecycle tool. It does not intercept tools, block turns, or store session bindings. Every call explicitly identifies its PRD and revision. Reconcile a refused checkpoint before advancing or claiming success; reads and recovery remain available. The agent must checkpoint material progress before unrelated work or handoff and judge whether changed code invalidates the recorded evidence.
 
 ## `InspectSurface`
 

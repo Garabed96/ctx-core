@@ -132,114 +132,70 @@ function loadExtension() {
   return { handlers, tool };
 }
 
-function context(sessionId: string) {
-  return {
-    cwd: path.resolve(import.meta.dir, ".."),
-    sessionManager: { getSessionId: () => sessionId },
-  };
-}
-
-describe("OMP PRD lifecycle controller", () => {
-  test("registers an object-rooted tool schema", () => {
-    const { tool } = loadExtension();
-    expect(tool.parameters.kind).toBe("object");
-  });
-
-  test("activates through the checkpoint command and guards source mutation", async () => {
-    const vault = await mkdtemp(path.join(tmpdir(), "ctx-core-omp-lifecycle-"));
-    temporaryPaths.push(vault);
-    const relative = "Example Initiative/PRD/example.md";
-    await Bun.write(path.join(vault, relative), PRD);
-    await Bun.write(
-      path.join(vault, "Example Initiative/Planning/example-g1-first-vertical-slice.md"),
-      PLAN,
-    );
+describe("OMP explicit PRD checkpoints", () => {
+  test("registers the lifecycle tool without tool or session hooks", () => {
     const { handlers, tool } = loadExtension();
-    const ctx = context("active-session");
-
-    const activated = await tool.execute(
-      "call-1",
-      {
-        schemaVersion: 1,
-        event: "gate.activate",
-        vaultRoot: vault,
-        path: relative,
-        expectedRevision: "r1",
-        gate: "G1",
-        verified: "Approval recorded.",
-        blockers: "none",
-        decision: "unchanged",
-        nextAction: "Implement G1.",
-        occurredAt: "2026-08-31T12:00:00Z",
-      },
-      undefined,
-      undefined,
-      ctx,
-    );
-
-    expect(activated.details.ok, JSON.stringify(activated.details)).toBe(true);
-    expect(activated.details.revision).toBe("r2");
-    const mutationGuard = await handlers.get("tool_call")?.(
-      { toolName: "edit", input: {}, toolCallId: "edit-1" },
-      ctx,
-    );
-    expect(mutationGuard).toBeUndefined();
-    const stopGuard = await handlers.get("session_stop")?.({}, ctx);
-    expect(stopGuard).toBeUndefined();
+    expect(tool.parameters.kind).toBe("object");
+    expect(handlers.size).toBe(0);
   });
 
-  test("blocks PRD-owned source mutation before gate attestation", async () => {
-    const { handlers } = loadExtension();
-    const ctx = context("unattested-session");
-    handlers.get("tool_result")?.(
-      {
-        toolName: "read",
-        input: { path: "skill://ctx-prd" },
-        isError: false,
-      },
-      ctx,
-    );
-
-    const guard = await handlers.get("tool_call")?.(
-      { toolName: "edit", input: {}, toolCallId: "edit-2" },
-      ctx,
-    );
-    expect(guard).toEqual({
-      block: true,
-      reason: "PRD-owned source mutation requires ctx_prd_lifecycle gate.activate or gate.assert-active first.",
-    });
-  });
-  test("fails closed on every bash call before gate attestation", async () => {
-    const { handlers } = loadExtension();
-    const ctx = context("unattested-bash-session");
-    handlers.get("tool_result")?.(
-      {
-        toolName: "read",
-        input: { path: "skill://ctx-prd" },
-        isError: false,
-      },
-      ctx,
-    );
-
-    for (const command of [
-      "git status --short",
-      "echo x > src/app.ts",
-      "cat > src/app.ts",
-      "printf x >> src/app.ts",
-      "tee src/app.ts",
-      "python3 -c \"open('src/app.ts', 'w').write('x')\"",
+  test("independent PRDs can recover in one repository while revision and merge checks remain enforced", async () => {
+    const vault = await mkdtemp(path.join(tmpdir(), "ctx-core-vault-"));
+    const repository = await mkdtemp(path.join(tmpdir(), "ctx-core-repository-"));
+    temporaryPaths.push(vault, repository);
+    for (const args of [
+      ["init", "-q"],
+      ["-c", "user.name=Test", "-c", "user.email=test@localhost", "-c", "core.hooksPath=/dev/null", "commit", "--allow-empty", "-qm", "Fixture"],
     ]) {
-      const guard = await handlers.get("tool_call")?.(
-        { toolName: "bash", input: { command }, toolCallId: command },
-        ctx,
-      );
-      expect(guard?.block).toBe(true);
+      expect(Bun.spawnSync(["git", "-C", repository, ...args]).exitCode).toBe(0);
     }
+    for (const initiative of ["Example Initiative", "Other Initiative"]) {
+      await Bun.write(path.join(vault, initiative, "PRD/example.md"), PRD.replaceAll("Example Initiative", initiative));
+      await Bun.write(
+        path.join(vault, initiative, "Planning/example-g1-first-vertical-slice.md"),
+        PLAN.replaceAll("Example Initiative", initiative),
+      );
+    }
+    const { handlers, tool } = loadExtension();
+    // No session/model identity is needed: each call names its PRD and revision.
+    const ctx = { cwd: repository };
+    const request = {
+      schemaVersion: 1,
+      vaultRoot: vault,
+      path: "Example Initiative/PRD/example.md",
+      gate: "G1",
+      verified: "Fixture evidence.",
+      blockers: "none",
+      decision: "unchanged",
+      nextAction: "Continue the fixture.",
+      occurredAt: "2026-09-05T00:00:00Z",
+    };
+    const call = async (event: string, expectedRevision: string, fields = {}) =>
+      (await tool.execute("call", { ...request, event, expectedRevision, ...fields }, undefined, undefined, ctx)).details;
+    const other = { path: "Other Initiative/PRD/example.md" };
+
+    expect((await call("gate.activate", "r1")).revision).toBe("r2");
+    expect((await call("gate.activate", "r1", other)).revision).toBe("r2");
+    expect((await call("gate.block", "r2", { blockers: "Waiting on evidence." })).revision).toBe("r3");
+    expect((await call("gate.assert-active", "r2", other)).ok).toBe(true);
+    expect((await call("gate.assert-active", "r3")).ok).toBe(false);
+    expect(Bun.spawnSync(["git", "-C", repository, "status", "--short"]).exitCode).toBe(0);
+    expect((await call("gate.resume", "r3")).revision).toBe("r4");
+    expect((await call("gate.update", "r2")).code).toBe("revision_conflict");
+    expect((await call("verifier.accepted", "r4", {
+      verification: { kind: "automated", identity: "focused contract command", status: "accepted" },
+    })).lifecycle_status).toBe("complete");
+    expect((await call("merge.assert", "r5")).ok).toBe(true);
+    const note = Bun.file(path.join(vault, request.path));
+    const before = await note.text();
+    await Bun.write(path.join(repository, "another-agent.txt"), "Unrelated repository work.");
+    expect((await call("merge.assert", "r5")).code).toBe("repository_mismatch");
+    expect(await note.text()).toBe(before);
+    expect(handlers.size).toBe(0);
   });
 
-  test("rejects every missing transition field before checkpoint invocation", async () => {
+  test("rejects missing transition fields before checkpoint invocation", async () => {
     const { tool } = loadExtension();
-    const ctx = context("invalid-transition-session");
     const result = await tool.execute(
       "call-invalid",
       {
@@ -253,9 +209,8 @@ describe("OMP PRD lifecycle controller", () => {
       },
       undefined,
       undefined,
-      ctx,
+      { cwd: "/does/not/exist" },
     );
-
     expect(result.details).toEqual({
       ok: false,
       code: "invalid_request",
