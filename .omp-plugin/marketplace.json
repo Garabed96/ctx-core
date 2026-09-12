@@ -4,14 +4,14 @@
     "name": "Garo Nazarian"
   },
   "metadata": {
-    "description": "Continuity-first PRD and Lean workflows for OMP."
+    "description": "Explicit PRD workflows and focused development skills."
   },
   "plugins": [
     {
       "name": "ctx",
       "source": "./dist/omp/ctx",
-      "description": "Two deep workflows for durable product decisions and lean technical execution.",
-      "version": "0.4.0"
+      "description": "Explicit PRD and Lean workflows with Discuss, Align, and Frontend skills.",
+      "version": "0.4.1"
     }
   ]
 }

@@ -14,7 +14,8 @@ RUNTIMES = {
     "codex": ".codex-plugin",
     "omp": ".omp-plugin",
 }
-SKILLS = ("ctx-prd", "ctx-lean")
+WORKFLOW_SKILLS = ("ctx-prd", "ctx-lean")
+SKILLS = (*WORKFLOW_SKILLS, "ctx-discuss", "ctx-align", "ctx-frontend")
 SHARED_REFERENCES = (
     "continuity-execution.md",
     "prd-checkpoint.md",
@@ -110,10 +111,23 @@ def compose(runtime: str, output: Path | None) -> Path:
         source_skill = core / "skills" / skill_name
         target_skill = target / "skills" / skill_name
         shutil.copytree(source_skill, target_skill)
+        source_paths.extend(path for path in source_skill.rglob("*") if path.is_file())
+        if skill_name not in WORKFLOW_SKILLS:
+            continue
+
+        # Runtime-native opt-in policies keep lifecycle machinery out of ordinary tasks.
+        if runtime == "codex":
+            agents = target_skill / "agents"
+            agents.mkdir(exist_ok=True)
+            (agents / "openai.yaml").write_text("policy:\n  allow_implicit_invocation: false\n")
+        else:
+            entrypoint = target_skill / "SKILL.md"
+            entrypoint.write_text(entrypoint.read_text().replace(
+                "---\n", "---\ndisable-model-invocation: true\n", 1
+            ))
+
         references = target_skill / "references"
         references.mkdir(exist_ok=True)
-
-        source_paths.extend(path for path in source_skill.rglob("*") if path.is_file())
         for reference_name in SHARED_REFERENCES:
             source_reference = core / "references" / reference_name
             shutil.copy2(source_reference, references / reference_name)
@@ -134,7 +148,7 @@ def compose(runtime: str, output: Path | None) -> Path:
         manifest["license"] = metadata["license"]
         manifest["interface"] = {
             "displayName": "CTX Core",
-            "shortDescription": "PRD and Lean continuity workflows",
+            "shortDescription": "Explicit PRD workflows and focused development skills",
             "developerName": metadata["author"]["name"],
             "category": "Coding",
             "capabilities": ["Interactive", "Write"],

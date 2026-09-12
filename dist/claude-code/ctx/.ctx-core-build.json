@@ -2,8 +2,11 @@
   "runtime": "claude-code",
   "skills": [
     "ctx-prd",
-    "ctx-lean"
+    "ctx-lean",
+    "ctx-discuss",
+    "ctx-align",
+    "ctx-frontend"
   ],
-  "source_sha256": "c8cc63dd6ea24fe42ca44128faca805119bd027286bf47455241631ac77b9095",
-  "version": "0.4.0"
+  "source_sha256": "f7b00e6352e485bc4afc77de786865b8b31ae5919d01d52ba644730229a3818f",
+  "version": "0.4.1"
 }

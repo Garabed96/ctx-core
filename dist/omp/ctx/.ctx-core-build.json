@@ -2,8 +2,11 @@
   "runtime": "omp",
   "skills": [
     "ctx-prd",
-    "ctx-lean"
+    "ctx-lean",
+    "ctx-discuss",
+    "ctx-align",
+    "ctx-frontend"
   ],
-  "source_sha256": "ceeb95567256eec2bdd2b1f88e69c2f6f682461ffd06697ae68112d653db6f12",
-  "version": "0.4.0"
+  "source_sha256": "84294919605a3146f7ac722b7f66c8a8705c13508c0f9039fca51d3e84f47452",
+  "version": "0.4.1"
 }

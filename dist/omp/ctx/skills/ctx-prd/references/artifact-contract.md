@@ -136,7 +136,7 @@ Use these required sections in recognizable order:
 - <excluded work>
 ```
 
-Optional gate-specific sections appear only between **Reuse decisions** and **Implementation slice**. Every field describes a distinct responsibility. The complete plan is runtime- and model-agnostic: name responsibilities, contracts, and files, not a provider, model, CLI, or reasoning effort. When an independent UI lane applies, require the `impeccable` skill; when none applies, use exactly `Not applicable`.
+Optional gate-specific sections appear only between **Reuse decisions** and **Implementation slice**. Every field describes a distinct responsibility. The complete plan is runtime- and model-agnostic: name responsibilities, contracts, and files, not a provider, model, CLI, or reasoning effort. When an independent UI lane applies, identify the relevant `impeccable` guidance in its brief; the primary may supply the needed guidance without requiring the worker to reload the full skill; when none applies, use exactly `Not applicable`.
 
 ## Approval and lifecycle
 

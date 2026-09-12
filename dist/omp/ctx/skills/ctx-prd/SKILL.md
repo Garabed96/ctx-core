@@ -1,6 +1,7 @@
 ---
+disable-model-invocation: true
 name: ctx-prd
-description: Creates and executes a durable gated product decision in Obsidian when user behavior, scope, visual direction, or staged acceptance is unsettled. Use for consequential product ambiguity requiring approval; not for settled technical work, debugging, or ordinary implementation.
+description: Create a PRD or continue its gated lifecycle when the user explicitly requests PRD work. Not for ordinary implementation or open-ended discussion.
 ---
 
 # CTX PRD
@@ -9,11 +10,11 @@ Own one product decision from clarification through verified gates. The canonica
 
 ## Route
 
-Use PRD when a consequential product decision is unresolved: what users can do, scope boundaries, visual direction, safety behavior, or staged acceptance. Technical complexity alone does not qualify. If the outcome is settled, stop and use `ctx-lean`.
+Use PRD only when the user requests a PRD, invokes CTX PRD, or explicitly continues a named PRD gate. Unresolved product or visual direction alone does not activate this workflow. Discuss such decisions without creating artifacts unless requested; settled work does not automatically route to `ctx-lean`.
 
 Preserve the user's original authorization:
 
-- Entering PRD for an unresolved product decision authorizes creating or updating its canonical PRD as workflow state, but never source implementation.
+- A request for PRD work authorizes the requested canonical artifact and lifecycle work, but never source implementation by itself.
 - “Design/write a PRD” authorizes the artifact and approval conversation, not implementation.
 - “Design and build/implement” authorizes Gate 1 only after explicit PRD approval.
 - Approval never authorizes a later human-verifier gate before that verifier accepts its evidence.

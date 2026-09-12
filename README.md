@@ -4,16 +4,19 @@
 
 A continuity-first Agent Skills plugin for Claude Code, Codex, and OMP.
 
-## Two workflows
+## Five focused skills
 
-| Workflow | Use it when | State |
+| Skill | Use it when | Invocation |
 |---|---|---|
-| **`ctx-prd`** | Product behavior, scope, visual direction, safety, or acceptance is unresolved | Canonical Obsidian PRD |
-| **`ctx-lean`** | The desired outcome is settled and needs analysis, implementation, debugging, QA, or verification | Ephemeral session state |
+| **`ctx-prd`** | Requesting a PRD or continuing a named PRD gate | Explicit |
+| **`ctx-lean`** | Requesting Lean execution or continuing a named PRD implementation plan | Explicit |
+| **`ctx-discuss`** | Exploring options and tradeoffs before implementation | Discoverable |
+| **`ctx-align`** | Requesting a prompt or skill review | Discoverable |
+| **`ctx-frontend`** | Changing frontend data flow, caching, API integration, or mutation state | Discoverable |
 
-> **Unsettled product decision → PRD. Settled outcome → Lean.**
+Ordinary implementation and UI polish do not automatically enter Lean or PRD. An unresolved product decision can be discussed without creating a PRD. Explicit continuation of an existing PRD retains its checkpoint obligations.
 
-Technical complexity and code size do not decide the workflow.
+Discuss, Align, and Frontend are self-contained. Frontend covers existing query keys, clients, hooks, validation, loading/error states, and mutations. Visual guidance remains in the independently installed Impeccable skill and the project's PRODUCT.md/DESIGN.md. No design skill is bundled or automatically loaded by CTX Frontend.
 
 ## `ctx-prd`
 
@@ -54,19 +57,11 @@ Gate lifecycle changes cross one executable, revision-checked `PrdCheckpoint` st
 
 `ctx-lean` completes settled technical work through the smallest complete vertical slice.
 
-Use it for:
-
-- approved features;
-- bugs and unexpected behavior;
-- refactors;
-- review feedback;
-- focused QA;
-- TDD requests;
-- verification and analysis.
+Invoke it explicitly for a settled outcome or a named PRD implementation plan. Technical complexity and file count alone do not activate it.
 
 Lean holds Goal, Boundaries, Acceptance, and Current slice ephemerally. It creates no separate plan, checkpoint, QA sheet, or handoff.
 
-When an existing canonical PRD encompasses the work, Lean reads its revision and active gate before mutation, then uses `PrdCheckpoint` after material changes in execution truth. Parking, resume, and merge use the same explicit lifecycle command; standalone Lean work remains ephemeral.
+When the user explicitly continues work owned by a named PRD, Lean reads its revision and active gate before mutation, then uses `PrdCheckpoint` after material changes in execution truth. Parking, resume, and merge use the same explicit lifecycle command; standalone Lean work remains ephemeral.
 
 Its proportional references cover:
 
@@ -81,7 +76,7 @@ The canonical Obsidian PRD is the only durable continuity artifact. Lean never c
 Both workflows share the same contract:
 
 - Main owns intent, architecture, integration, canonical state, and final proof.
-- At most two bounded workers may participate in an ordinary run.
+- Target one implementer for a complete bounded change. Main handles review, verification, and small corrections; another worker needs substantial remaining work or a genuinely independent outcome.
 - Completion claims require fresh, claim-specific evidence.
 - UI behavior is verified through the actual surface.
 - Bugs are verified through the original reproduction.
@@ -118,7 +113,7 @@ omp plugin marketplace add Garabed96/ctx-core
 omp plugin install ctx@ctx-core --scope user
 ```
 
-Both skills are model-invoked. Describe the work normally or request one explicitly:
+Lean and PRD are explicit-only: Codex uses `allow_implicit_invocation: false`; Claude Code and OMP use `disable-model-invocation: true`. The remaining skills have narrow automatic discovery. Request workflows explicitly:
 
 ```text
 Use ctx-prd to resolve this product decision.
@@ -148,11 +143,20 @@ python3 contract-tests/check.py
 
 [`ctx-plugin`](https://github.com/Garabed96/ctx-plugin) is the frozen first generation.
 
-It explored broad development orchestration. `ctx-core` keeps the useful continuity discipline behind two smaller interfaces: durable PRD state for product work and bounded Lean state for technical execution.
+It explored broad development orchestration. `ctx-core` keeps the useful continuity discipline behind explicit PRD/Lean interfaces, with focused discussion, prompt review, and frontend data guidance.
 
 ## Status
 
-**v0.4.0 — Alpha**
+**v0.4.1 — Alpha**
+
+### v0.4.1
+
+- Made Lean and PRD explicit-only using each runtime's native invocation policy; preserved the PRD state machine and existing document format.
+- Absorbed Discuss, Align, and a narrow Frontend data-architecture skill. These load no lifecycle references or design workflow.
+- Reduced standalone Lean guidance and removed automatic PRD discovery and escalation.
+- Target one implementation worker per complete bounded change; the primary owns verification and small corrections.
+- When migrating, remove or disable standalone Discuss, Align, and broad Frontend copies so their old triggers do not remain active. Keep Impeccable installed separately.
+
 
 ### v0.4.0
 

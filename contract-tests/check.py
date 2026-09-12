@@ -22,7 +22,8 @@ CATALOGS = {
     "codex": ".agents/plugins/marketplace.json",
     "omp": ".omp-plugin/marketplace.json",
 }
-EXPECTED_SKILLS = {"ctx-prd", "ctx-lean"}
+WORKFLOW_SKILLS = {"ctx-prd", "ctx-lean"}
+EXPECTED_SKILLS = WORKFLOW_SKILLS | {"ctx-discuss", "ctx-align", "ctx-frontend"}
 EXPECTED_REFERENCES = {
     "ctx-prd": {
         "artifact-contract.md",
@@ -42,6 +43,9 @@ EXPECTED_REFERENCES = {
         "runtime.md",
         "testing.md",
     },
+    "ctx-discuss": set(),
+    "ctx-align": set(),
+    "ctx-frontend": set(),
 }
 RESULT_FIELDS = {"route", "authorization", "durable_state", "mode", "worktree"}
 REFERENCE_PATTERN = re.compile(r"references/[a-z0-9-]+\.md")
@@ -188,8 +192,25 @@ def validate_composition(repo: Path) -> None:
                 require(metadata.get("name") == skill_name, f"{skill_name} frontmatter name drifted")
                 require(bool(metadata.get("description")), f"{skill_name} description is missing")
 
+                policy_path = skill_root / "agents" / "openai.yaml"
+                if skill_name in WORKFLOW_SKILLS:
+                    if runtime == "codex":
+                        require(policy_path.is_file(), f"{skill_name} Codex invocation policy is missing")
+                        require(
+                            policy_path.read_text() == "policy:\n  allow_implicit_invocation: false\n",
+                            f"{skill_name} must be explicit-only in Codex",
+                        )
+                    else:
+                        require(
+                            metadata.get("disable-model-invocation") == "true",
+                            f"{runtime}/{skill_name} must be explicit-only",
+                        )
+                else:
+                    require(not policy_path.exists(), f"{skill_name} should remain discoverable")
+                    require(metadata.get("disable-model-invocation") != "true", f"{skill_name} should remain discoverable")
+
                 references_root = skill_root / "references"
-                references = {item.name for item in references_root.iterdir() if item.is_file()}
+                references = {item.name for item in references_root.glob("*") if item.is_file()}
                 require(
                     references == EXPECTED_REFERENCES[skill_name],
                     f"{runtime}/{skill_name} reference set drifted: {sorted(references)}",
@@ -256,7 +277,7 @@ def validate_checkpoint_contract(repo: Path) -> None:
     ):
         require(section in artifact, f"canonical PRD section is missing: {section}")
 
-    for skill_name in EXPECTED_SKILLS:
+    for skill_name in WORKFLOW_SKILLS:
         skill = (repo / "core" / "skills" / skill_name / "SKILL.md").read_text()
         require("`PrdCheckpoint`" in skill, f"{skill_name} does not cross PrdCheckpoint")
         require(

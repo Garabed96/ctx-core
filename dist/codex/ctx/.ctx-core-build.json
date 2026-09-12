@@ -2,8 +2,11 @@
   "runtime": "codex",
   "skills": [
     "ctx-prd",
-    "ctx-lean"
+    "ctx-lean",
+    "ctx-discuss",
+    "ctx-align",
+    "ctx-frontend"
   ],
-  "source_sha256": "d776594ca3a06466b58ec7fdf94047657bf5268012f0ca5baa9150bfd403698d",
-  "version": "0.4.0"
+  "source_sha256": "ef1eb23320d1ea585a9c9b27d2c7d02351e9188a922635619eb9336a1076da04",
+  "version": "0.4.1"
 }

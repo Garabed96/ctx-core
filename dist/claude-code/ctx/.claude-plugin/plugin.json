@@ -2,7 +2,7 @@
   "author": {
     "name": "Garo Nazarian"
   },
-  "description": "Continuity-first product and technical execution through two deep workflows: PRD and Lean.",
+  "description": "Explicit PRD and Lean workflows, focused discussion, prompt review, and frontend data architecture.",
   "name": "ctx",
-  "version": "0.4.0"
+  "version": "0.4.1"
 }

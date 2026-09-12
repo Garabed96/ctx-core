@@ -1,80 +1,36 @@
 ---
 name: ctx-lean
-description: Executes a settled technical outcome through the smallest complete vertical slice with bounded context and evidence. Use for implementation, bugs, refactors, review feedback, focused QA, or verification when product behavior and acceptance are already decided; escalate unresolved product decisions to ctx-prd.
+description: Execute a settled outcome when the user explicitly requests CTX Lean or continues a named PRD implementation plan.
 ---
 
 # CTX Lean
 
-Hold a context-restraint contract while completing settled work. Lean is not a lightweight planning ceremony; it investigates and executes when authorized.
+Use this workflow only when requested, including explicit continuation of a named PRD plan. Ordinary implementation, refactoring, debugging, and UI polish do not automatically enter Lean. Product ambiguity alone does not activate CTX PRD; discuss the missing decision without creating workflow artifacts unless requested.
 
-## Route
+Preserve the user's authorization: analysis and review stay read-only; build and fix requests authorize the requested changes. Infer routine choices from existing evidence and ask only when the answer materially changes scope, risk, or outcome.
 
-Use Lean when the desired outcome is settled, regardless of code size. Technical uncertainty, architectural depth, or a difficult bug does not require a PRD.
+## Standalone work
 
-Escalate to `ctx-prd` only when progress requires an unresolved consequential product decision about user behavior, scope, visual direction, safety, or staged acceptance.
+Hold the goal, boundaries, observable acceptance, and smallest complete change in session context. Inspect relevant existing patterns, implement the authorized outcome, and verify the affected behavior. Do not search for an encompassing PRD or create a plan, checkpoint, QA note, or handoff artifact for standalone work.
 
-Preserve the original verb:
+Use references only when they resolve a concrete need:
 
-- “Build,” “fix,” “change,” or equivalent authorizes execution.
-- “Analyze,” “explain,” “review,” or “plan” authorizes only that result.
+- [Debugging](references/debugging.md) for an unresolved failure.
+- [Testing](references/testing.md) for changed contracts or requested TDD.
+- [Review Feedback](references/review-feedback.md) for evaluating review suggestions.
 
-## 1. Align silently
+The primary owns implementation, integration, and verification. For a substantial delegated change, prefer one implementer for the complete bounded outcome, including related files. Keep small corrections in the primary; another worker needs substantial remaining work or a genuinely independent outcome. Workers do not delegate or own PRD state. Follow the configured runtime and project policy for model selection and tool restrictions.
 
-Inspect the prompt and available sources for intent, observable success, constraints, and current truth. Ask only when one missing technical answer blocks safe execution or a destructive choice requires authorization. Resolve ordinary choices from repository evidence and established patterns.
+For frontend data architecture, use `ctx-frontend` when relevant. Visual guidance remains in the independently installed Impeccable skill and the project's existing PRODUCT.md/DESIGN.md; pass relevant guidance in a worker brief rather than requiring workers to reload a design workflow.
 
-Hold this ephemeral slice in session state:
+## Explicit PRD-owned work
 
-```text
-Goal: <one settled outcome>
-Boundaries: <in scope / out of scope / preserve>
-Acceptance: <observable proof>
-Current slice: <smallest complete vertical change>
-```
+When the user explicitly identifies the owning PRD or continues its active plan, read that PRD's exact path, revision, gate, checkpoint, and linked plan. Before lifecycle work, read `references/continuity-execution.md`, `references/prd-checkpoint.md`, `references/runtime-interface.md`, and `references/runtime.md`.
 
-Resolve whether an existing canonical PRD encompasses the work. Prefer explicit project context and already-linked artifacts; never scan unrelated notes. When exactly one PRD owns the work, read its exact path, revision, current gate, checkpoint, and that gate's single linked plan; `PrdCheckpoint` validates the plan's structure and backlink.
+Use `PrdCheckpoint` to activate or assert the named gate before implementation. A refused assertion requires reconciliation; inspection and recovery remain available. Implement the linked plan's current outcome and obtain the named verifier's evidence.
 
-Do not create a standalone plan, checkpoint, or handoff artifact. PRD-owned execution uses the already-linked gate plan; standalone Lean work remains ephemeral.
+Checkpoint material changes in verified evidence, blockers, decisions, or gate state before handoff or yield. Intermediate edits and unchanged reruns do not require another checkpoint. Preserve human acceptance requirements; automated results do not pass a human-verifier gate.
 
-## 2. Apply five checks
+Pause, resume, retry, and merge use the existing lifecycle transitions. Require `assert-merge` before merging and `record-merge` afterward. Never patch lifecycle fields directly or refresh a fingerprint to conceal stale evidence.
 
-Before mutation, verify:
-
-1. **Requirement covered** — the slice satisfies the actual request.
-2. **Smallest complete slice** — removing more would make it incomplete.
-3. **Safety preserved** — named invariants and existing contracts remain intact.
-4. **Proof executable** — the acceptance can be observed now.
-5. **No speculative machinery** — every added seam, option, and abstraction is required by current behavior.
-
-Correct the slice silently when a check fails. Ask only if correction changes the user's intended outcome.
-
-## 3. Enter the appropriate evidence mode
-
-- Bug or unexpected behavior: read [Debugging](references/debugging.md) before proposing implementation.
-- New or changed observable contract, or an explicit TDD request: read [Testing](references/testing.md).
-- Review feedback: read [Review Feedback](references/review-feedback.md) before accepting any suggestion.
-
-These are proportional references, not additional workflows.
-
-## 4. Execute and prove
-
-Before mutation, read `references/continuity-execution.md`, `references/runtime-interface.md`, and `references/runtime.md`. When a canonical PRD owns the work, also read `references/prd-checkpoint.md`.
-
-When a canonical PRD owns the work, invoke `PrdCheckpoint` with `assert-active` at the exact revision before source mutation; a refused assertion is reconciled before implementation. Reads and checkpoint recovery remain available.
-
-Implement the current slice through the existing source-of-truth path. Follow the linked plan's ownership contract without turning it into runtime-specific orchestration: lanes name responsibilities, interfaces, and disjoint files, never a provider or model. When an independent UI lane applies, it uses the `impeccable` skill. Migrate affected callers and remove obsolete paths; do not add compatibility shims unless the product contract requires them.
-
-Run the strongest focused proof for the changed surface. For focused QA, exercise the actual requested flows and report evidence directly; Lean creates no separate durable QA note unless the user explicitly requests one.
-
-After every material change in execution truth, invoke `PrdCheckpoint` with `update`, `block`, `resume`, `retry`, `fail`, or `pass` as appropriate before unrelated work or yield. Record only current status, verified evidence, the active decision, one next action, and the deterministic repository fingerprint; never add an implementation journal or duplicate the task plan.
-
-Finish applicable cleanup only after the behavior is proven: focused contract tests, affected source-of-truth documentation, and obsolete scaffold removal. Do not create post-hoc checkpoint documents.
-
-Before merging PRD-owned work, require `assert-merge`; after merging, require `record-merge`. Standalone Lean work has no PRD merge barrier.
-
-Completion criterion: the requested observable outcome is proven, affected callsites are reconciled, every owning-PRD checkpoint has succeeded, and every completion claim is bounded by fresh evidence.
-
-## 5. Preserve PRD continuity
-
-The encompassing Obsidian PRD is the only durable continuity artifact. Parking invokes `PrdCheckpoint` with `pause`, preserving its current gate and replacing its checkpoint with verified evidence, the pause decision, and one next action. Resume reads that PRD first, verifies recorded repository and runtime state, then invokes `resume` for blocked/paused work or `retry` for a failed gate.
-
-Standalone Lean work with no encompassing PRD remains ephemeral. Escalate to `ctx-prd` only for unresolved consequential product decisions; never create a mini-PRD or a separate handoff merely to persist Lean state.
+Completion means the requested outcome has fresh supporting evidence and any owning PRD checkpoint has been saved and attested. State any remaining verification limits explicitly.

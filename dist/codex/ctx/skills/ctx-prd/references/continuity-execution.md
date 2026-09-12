@@ -15,10 +15,9 @@ Honor the user's original verb.
 
 Main owns intent, architectural judgment, continuity, integration, artifact state, and final verification.
 
-Delegate only when a bounded lane is genuinely independent and its result reduces uncertainty or elapsed work. At most two workers may participate in an ordinary run:
+Implement small changes directly. For substantial delegated work, target one implementation worker for the complete bounded outcome, including related files. Keep review, verification, and small corrections in Main. Spawn another implementer only for substantial remaining implementation or a genuinely independent outcome with disjoint ownership; file count alone is not a reason to split.
 
-- one read-only scout for missing evidence;
-- one implementation worker for a self-contained, non-overlapping slice.
+Do not require a preliminary scout or architect. Use read-only research only for a specific unresolved question that Main cannot resolve efficiently. Workers do not delegate, run verification, manage servers, or commit. Where the runtime supports tool restrictions, give implementers only the reading and editing tools needed for the assignment.
 
 Main defines each lane's inputs, owned files or evidence, output contract, and stop condition before dispatch. Workers do not redefine scope, approve gates, update canonical PRD state, or make completion claims for Main. Main verifies their output before use.
 
@@ -71,7 +70,7 @@ Teardown is a separate destructive operation. Run `TeardownWorktree` only on an 
 
 Resume PRD-owned work from the canonical Obsidian lifecycle state and current checkpoint, then verify recorded branch/worktree and runtime claims against current evidence.
 
-When Lean work is encompassed by an existing PRD:
+When the user explicitly continues Lean work owned by a named PRD:
 
 1. resolve that PRD from explicit project context or existing links;
 2. capture its exact revision, current gate, and checkpoint;

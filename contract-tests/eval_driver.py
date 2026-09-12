@@ -22,11 +22,10 @@ RUNTIMES = ("codex",)
 
 PROMPT_TEMPLATE = """{evaluator}
 
-Classify exactly ONE case. Read the composed skills exactly as a session would \
-receive them: {skills_dir}/ctx-prd/SKILL.md, {skills_dir}/ctx-lean/SKILL.md, and \
-every file in their references/ directories. Route from that composed text, not \
-from prior knowledge. Do not read contract-tests/cases.json or anything else \
-under contract-tests/ — it contains the answer key.
+Classify exactly ONE case. Inspect the skill descriptions and invocation policies \
+in {skills_dir}. Read skill bodies and references only as needed. Route from the \
+composed instructions, not prior knowledge. Do not read contract-tests/cases.json \
+or anything else under contract-tests/ — it contains the answer key.
 
 Treat the following as the user's opening message to a fresh session with these \
 skills installed:
@@ -44,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", default="codex", choices=RUNTIMES)
     parser.add_argument("--model", help="Model override passed to `codex exec -m`.")
-    parser.add_argument("--jobs", type=int, default=4, help="Concurrent cases (default 4).")
+    parser.add_argument("--jobs", type=int, default=1, help="Concurrent cases (default 1).")
     parser.add_argument(
         "--case",
         action="append",
